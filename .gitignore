@@ -1,0 +1,23 @@
+# Dependencies and local tooling
+node_modules/
+.cache/
+.tools/
+
+# Next.js and TypeScript output
+.next/
+out/
+dist/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+# Tests and logs
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Secrets and local settings
+.env*
+.DS_Store
+Thumbs.db

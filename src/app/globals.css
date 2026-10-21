@@ -1,0 +1,38 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #f7f5f0;
+  --sheet: #ffffff;
+  --ink: #1d2420;
+  --ink-2: #4b534d;
+  --ink-3: #656b66;
+  --green: #225c46;
+  --green-2: #2f7a5e;
+  --mint: #e4eee8;
+  --mint-2: #c6dfce;
+  --clay: #a9431f;
+  --clay-soft: #f7e6de;
+  --sans:
+    "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans SC",
+    system-ui, sans-serif;
+  --serif: "Source Han Serif SC", "Noto Serif SC", "Songti SC", Georgia, serif;
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-*: initial;
+  --font-*: initial;
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-green: var(--green);
+  --color-green-2: var(--green-2);
+  --color-mint: var(--mint);
+  --color-mint-2: var(--mint-2);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --font-sans: var(--sans);
+  --font-serif: var(--serif);
+}
