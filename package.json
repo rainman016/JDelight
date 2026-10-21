@@ -22,11 +22,13 @@
     "check": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"npm run typecheck && npm run lint && npm run test && npm run build && npm run test:e2e\""
   },
   "dependencies": {
+    "dexie": "4.4.6",
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "fake-indexeddb": "6.2.6",
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
