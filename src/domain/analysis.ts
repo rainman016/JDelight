@@ -9,6 +9,7 @@ export const analysisInputSchema = z.strictObject({
 export type AnalysisInput = z.infer<typeof analysisInputSchema>;
 export interface AnalysisStatus {
   available: boolean;
+  uiRemaining: number;
   used: number;
   maxCalls: number;
   costUsedCny: number;

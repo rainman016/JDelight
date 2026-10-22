@@ -301,7 +301,7 @@ export default function NewJob({
                   {error}
                 </p>
               )}
-              {status?.available && (
+              {status?.available && status.uiRemaining > 0 && (
                 <label className="real-switch">
                   <input
                     type="checkbox"
@@ -309,10 +309,7 @@ export default function NewJob({
                     checked={useReal}
                     onChange={(e) => setUseReal(e.target.checked)}
                   />
-                  <span>
-                    用真实 AI 分析（还剩{" "}
-                    {Math.max(0, status.maxCalls - status.used)} 次）
-                  </span>
+                  <span>用真实 AI 分析（还剩 {status.uiRemaining} 次）</span>
                 </label>
               )}
               {useReal && (
@@ -634,9 +631,7 @@ function FailureView({
             ) : (
               <button type="button" className="btn primary" onClick={onRetry}>
                 重新分析
-                {useReal && status
-                  ? `（还剩 ${Math.max(0, status.maxCalls - status.used)} 次）`
-                  : ""}
+                {useReal && status ? `（还剩 ${status.uiRemaining} 次）` : ""}
               </button>
             ))}
         </div>

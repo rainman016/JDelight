@@ -26,9 +26,15 @@ export async function analysisStatus(): Promise<AnalysisStatus | null> {
     const data = (await response.json()) as AnalysisStatus;
     if (
       typeof data.available !== "boolean" ||
-      ![data.used, data.maxCalls, data.costUsedCny, data.maxCostCny].every(
-        (n) => Number.isFinite(n) && n >= 0,
-      )
+      ![
+        data.used,
+        data.maxCalls,
+        data.costUsedCny,
+        data.maxCostCny,
+        data.uiRemaining,
+      ].every((n) => Number.isFinite(n) && n >= 0) ||
+      !Number.isInteger(data.uiRemaining) ||
+      data.uiRemaining > data.maxCalls
     )
       return null;
     return data;

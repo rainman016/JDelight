@@ -304,11 +304,61 @@ test("无配置接口安全降级；Host/Origin 拒绝；有效响应只有约�
   );
   expect(await status.json()).toEqual({
     available: false,
+    uiRemaining: 0,
     used: 0,
     maxCalls: 10,
     costUsedCny: 0,
     maxCostCny: 5,
   });
+});
+test.each([
+  { name: "未用", entries: () => [], remaining: 2 },
+  { name: "已用一次冒烟", entries: () => [entry("smoke")], remaining: 1 },
+  {
+    name: "两次冒烟用完",
+    entries: () => [entry("smoke"), entry("smoke")],
+    remaining: 0,
+  },
+  {
+    name: "总额度只剩一次",
+    entries: () => Array.from({ length: 9 }, () => entry("quality")),
+    remaining: 1,
+  },
+  {
+    name: "总额度用完",
+    entries: () => Array.from({ length: 10 }, () => entry("quality")),
+    remaining: 0,
+  },
+  {
+    name: "金额不足预留下一次",
+    entries: () => [entry("quality", 4.9)],
+    remaining: 0,
+  },
+  {
+    name: "pending 也占冒烟额度",
+    entries: () => [entry("smoke", MAX_CALL_COST_CNY, "pending")],
+    remaining: 1,
+  },
+])("状态接口显示界面实际剩余次数：$name", async ({ entries, remaining }) => {
+  const { options } = await setup(entries());
+  const send = vi.fn<typeof fetch>();
+  const handlers = createHandlers(
+    createAnalysisService({ ...options, fetch: send }),
+  );
+  const response = await handlers.GET(
+    new Request("http://localhost:3100/api/analysis/status", {
+      headers: { Host: "localhost:3100" },
+    }),
+  );
+  const status = await response.json();
+  expect(status).toMatchObject({
+    uiRemaining: remaining,
+    available: remaining > 0,
+    maxCalls: 10,
+    maxCostCny: 5,
+  });
+  expect(JSON.stringify(status)).not.toContain(secret);
+  expect(send).not.toHaveBeenCalled();
 });
 test("配置和输入校验先于调用；prompt 隔离指令文本；质量命令拒绝仓库内路径", async () => {
   const { file, config, options } = await setup();

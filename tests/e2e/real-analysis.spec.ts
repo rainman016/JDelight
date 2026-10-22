@@ -10,6 +10,7 @@ const fixture = JSON.parse(
 );
 const ready = {
   available: true,
+  uiRemaining: 2,
   used: 0,
   maxCalls: 10,
   costUsedCny: 0,
@@ -37,6 +38,7 @@ async function confirm(page: Page) {
 async function real(page: Page) {
   await confirm(page);
   const toggle = page.getByRole("switch");
+  await expect(toggle).toHaveAccessibleName("用真实 AI 分析（还剩 2 次）");
   await expect(toggle).not.toBeChecked();
   await toggle.focus();
   await page.keyboard.press("Space");
@@ -114,7 +116,13 @@ for (const width of [1440, 390]) {
     await real(page);
     await page.route("**/api/analysis/status", (route) =>
       route.fulfill({
-        json: { ...ready, available: false, used: 10, costUsedCny: 1.25 },
+        json: {
+          ...ready,
+          available: false,
+          uiRemaining: 0,
+          used: 10,
+          costUsedCny: 1.25,
+        },
       }),
     );
     await page.getByRole("button", { name: "确认原文，开始分析" }).click();
@@ -149,14 +157,14 @@ for (const width of [1440, 390]) {
     ).toBeVisible();
     await expect(page.getByText("第 6 行的引用和原文对不上")).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "重新分析（还剩 10 次）" }),
+      page.getByRole("button", { name: "重新分析（还剩 2 次）" }),
     ).toBeVisible();
     await shot(page, `${width}-real-failure`);
   });
 }
 test("无配置不出现开关，模拟照旧", async ({ page }) => {
   await page.route("**/api/analysis/status", (route) =>
-    route.fulfill({ json: { ...ready, available: false } }),
+    route.fulfill({ json: { ...ready, available: false, uiRemaining: 0 } }),
   );
   let posts = 0;
   await page.route("**/api/analysis", (route) => {
@@ -189,6 +197,28 @@ test("额度用完可以只保存原文，刷新后仍待分析", async ({ page 
   await page.reload();
   await expect(page.locator("article.job")).toHaveCount(1);
   await expect(page.getByText("待分析", { exact: true })).toBeVisible();
+});
+test("界面剩余一次显示 1，金额不足时无开关", async ({ page }) => {
+  await page.route("**/api/analysis/status", (route) =>
+    route.fulfill({ json: { ...ready, used: 1, uiRemaining: 1 } }),
+  );
+  await confirm(page);
+  await expect(page.getByRole("switch")).toHaveAccessibleName(
+    "用真实 AI 分析（还剩 1 次）",
+  );
+  await page.route("**/api/analysis/status", (route) =>
+    route.fulfill({
+      json: {
+        ...ready,
+        used: 1,
+        costUsedCny: 4.9,
+        available: false,
+        uiRemaining: 0,
+      },
+    }),
+  );
+  await confirm(page);
+  await expect(page.getByRole("switch")).toHaveCount(0);
 });
 test("真实等待显示秒数，取消中止等待且原文仍可恢复", async ({ page }) => {
   let requested = false;

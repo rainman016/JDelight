@@ -93,6 +93,22 @@ export function ensureBudget(ledger: Ledger, purpose: Purpose) {
         : `合并后质量验证最多 ${limit} 次，已用 ${purposeUsed} 次，不会自动恢复`,
     );
 }
+export function remainingUiCalls(ledger: Ledger) {
+  try {
+    ensureBudget(ledger, "smoke");
+  } catch (error) {
+    if (error instanceof LedgerError && error.kind === "quota") return 0;
+    throw error;
+  }
+  return Math.max(
+    0,
+    Math.min(
+      MAX_CALLS - ledger.entries.length,
+      MAX_SMOKE_CALLS -
+        ledger.entries.filter((entry) => entry.purpose === "smoke").length,
+    ),
+  );
+}
 export async function readLedger(file: string): Promise<Ledger> {
   try {
     const stat = await lstat(file);

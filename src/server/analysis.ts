@@ -10,7 +10,7 @@ import { sourceLines } from "../domain/source.ts";
 import { readConfig, type ServerConfig } from "./config.ts";
 import { buildMessages } from "./prompt.ts";
 import {
-  ensureBudget,
+  remainingUiCalls,
   LedgerError,
   readLedger,
   reserve,
@@ -75,6 +75,7 @@ export function createAnalysisService(options: Options = {}) {
     async status(): Promise<AnalysisStatus> {
       const base = {
         available: false,
+        uiRemaining: 0,
         used: 0,
         maxCalls: MAX_CALLS,
         costUsedCny: 0,
@@ -85,12 +86,8 @@ export function createAnalysisService(options: Options = {}) {
       try {
         const ledger = await readLedger(config.ledgerPath);
         const summary = summarize(ledger);
-        try {
-          ensureBudget(ledger, "smoke");
-          return { ...base, ...summary, available: true };
-        } catch {
-          return { ...base, ...summary };
-        }
+        const uiRemaining = remainingUiCalls(ledger);
+        return { ...base, ...summary, uiRemaining, available: uiRemaining > 0 };
       } catch {
         return { ...base, used: MAX_CALLS, costUsedCny: MAX_COST_CNY };
       }
