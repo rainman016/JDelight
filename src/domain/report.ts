@@ -196,12 +196,18 @@ export function validateReport(
             .filter((l) => l !== undefined);
           if (
             block.strength === "required" &&
-            lines.some(
-              (l) => l.section === "bonus" || /优先|加分|者优先/.test(l.text),
-            )
+            lines.some((line) => {
+              if (line.section === "bonus") return true;
+              const clauses = line.text
+                .split(/[，,；;。！？]/)
+                .filter((clause) => clause.includes(block.phrase));
+              return (clauses.length ? clauses : [line.text]).some((clause) =>
+                /优先|加分/.test(clause),
+              );
+            })
           )
             add("V4", `“${block.phrase}”所在的优先或加分条件被写成了必备`);
-          if (!lines.some((l) => l.text.includes(block.phrase)))
+          if (!block.citations.some((c) => c.quote.includes(block.phrase)))
             add("V6", `要求“${block.phrase}”在引用行原文里找不到`);
           break;
         }

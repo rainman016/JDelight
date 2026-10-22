@@ -1,6 +1,13 @@
 // @vitest-environment node
 import { afterEach, expect, test, vi } from "vitest";
-import { mkdtemp, readFile, writeFile, rm, mkdir } from "node:fs/promises";
+import {
+  mkdtemp,
+  readFile,
+  writeFile,
+  rm,
+  mkdir,
+  readdir,
+} from "node:fs/promises";
 import path from "node:path";
 import { tmpdir } from "node:os";
 import { execFileSync } from "node:child_process";
@@ -18,6 +25,7 @@ import {
 import { sourceLines } from "./domain/source";
 import { scanClient } from "../scripts/scan-client.mjs";
 import { setupEnvironment } from "../scripts/setup-env.mjs";
+import { runQuality } from "../scripts/quality.mjs";
 import sample from "../fixtures/sample-jd.json";
 import report from "../fixtures/sample-report.json";
 
@@ -61,9 +69,12 @@ function modelBody() {
   }
   return strip(report);
 }
-const reply = (content = JSON.stringify(modelBody())) =>
+const reply = (
+  content = JSON.stringify(modelBody()),
+  finishReason?: string | null,
+) =>
   Response.json({
-    choices: [{ message: { content } }],
+    choices: [{ message: { content }, finish_reason: finishReason }],
     usage: { prompt_tokens: 1000, completion_tokens: 500 },
   });
 function entry(
@@ -104,7 +115,8 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
     const body = JSON.parse(init!.body as string);
     expect(body.model).toBe("deepseek-flash");
     expect(body.thinking).toEqual({ type: "disabled" });
-    expect(body.messages[0].content).toContain("prompt-1");
+    expect(body.messages[0].content).toContain("prompt-2");
+    expect(body.max_tokens).toBe(12000);
     expect(body.messages[1].content).toContain("lineNo");
     return reply();
   });
@@ -113,7 +125,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
   expect(result.response.ok).toBe(true);
   if (result.response.ok) {
     expect(result.response.content.origin).toBe("model");
-    expect(result.response.content.ruleVersion).toBe("prompt-1");
+    expect(result.response.content.ruleVersion).toBe("prompt-2");
     expect(result.response.content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
   }
   expect(result.receipts[0].estimatedCostCny).toBe(estimateCost(1000, 500));
@@ -144,6 +156,189 @@ test.each(["wrong-quote", "bad-json", "bad-envelope", "echo-secret"])(
     expect((await readLedger(file)).entries).toHaveLength(2);
     expect(JSON.stringify(result)).not.toContain(secret);
     expect(JSON.stringify(result.response)).toMatch(/[\u4e00-\u9fff]/);
+  },
+);
+test("prompt-2：包含全部限长与条件拆分规则，重试仍携带上次原因", () => {
+  const system = buildMessages(input())[0].content;
+  for (const rule of [
+    "提示词版本：prompt-2",
+    "整体简洁，不重复原文",
+    "focus.gist.text ≤ 60 字",
+    "每条重点 text ≤ 60 字、basis ≤ 80 字",
+    "每个 Claim text ≤ 120 字",
+    "每个段落 ≤ 3 个 Claim",
+    "能力解析 ≤ 6 项",
+    "场景推测 ≤ 3 项",
+    "准备建议 ≤ 6 块",
+    "待确认事项 ≤ 5 条",
+    "status=not_in_source、blocks=[]",
+    "每个条件单独一个 requirement",
+    "phrase 取该条件的原文措辞",
+    "至少一个 citations[].quote",
+    "只引用该条件所在的那一段，不要整行引用",
+    "“优先 / 加分 / 者优先”所在分句里的条件只能是 preferred",
+  ])
+    expect(system).toContain(rule);
+  const reasons = ["第 12 行的引用和原文对不上"];
+  expect(buildMessages(input(), reasons).at(-1)!.content).toContain(reasons[0]);
+});
+async function qualityFiles(
+  output: string,
+  finishReason?: string,
+  retryOutput = output,
+  retryFinishReason: string | null = finishReason ?? null,
+) {
+  const { root, options } = await setup();
+  const jd = path.join(root, "fictional-jd.txt");
+  await writeFile(jd, sample);
+  const send = vi
+    .fn<typeof fetch>()
+    .mockImplementationOnce(async () => reply(output, finishReason))
+    .mockImplementationOnce(async () => reply(retryOutput, retryFinishReason));
+  const service = createAnalysisService({ ...options, fetch: send });
+  const result = await runQuality(
+    { jd, out: path.join(root, "quality-out") },
+    service,
+  );
+  const validation = JSON.parse(
+    await readFile(path.join(result.run, "validation.json"), "utf8"),
+  );
+  const usage = JSON.parse(
+    await readFile(path.join(result.run, "usage.json"), "utf8"),
+  );
+  return { ...result, validation, usage, send };
+}
+test("质量脚本：截断原文分次留存，usage 记录 length，无 finish_reason 时为 null", async () => {
+  const truncated = '{"header":{"shown":[';
+  const { run, result, validation, usage, send } = await qualityFiles(
+    truncated,
+    "length",
+    "not JSON",
+    null,
+  );
+  expect(result.response.ok).toBe(false);
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(
+    await readFile(path.join(run, "attempt-1-rejected-output.txt"), "utf8"),
+  ).toBe(truncated);
+  expect(
+    await readFile(path.join(run, "attempt-2-rejected-output.txt"), "utf8"),
+  ).toBe("not JSON");
+  expect(
+    usage.receipts.map((row: { finishReason: unknown }) => row.finishReason),
+  ).toEqual(["length", null]);
+  expect(validation.rejectedAttempts).toEqual([
+    { attempt: 1, file: "attempt-1-rejected-output.txt" },
+    { attempt: 2, file: "attempt-2-rejected-output.txt" },
+  ]);
+  const missing = await qualityFiles("not JSON");
+  expect(missing.usage.receipts[0].finishReason).toBeNull();
+});
+test("质量脚本：校验失败留存程序补齐后的报告，每次尝试独立，重试成功仍留前次失败", async () => {
+  const body = JSON.parse(JSON.stringify(modelBody()));
+  body.focus.items[0].citations[0].quote = "原文不存在的句子";
+  const output = JSON.stringify(body);
+  const { run, validation, usage, send } = await qualityFiles(output, "stop");
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(validation.ok).toBe(false);
+  const rejected = [];
+  for (const attempt of [1, 2]) {
+    const content = JSON.parse(
+      await readFile(
+        path.join(run, `attempt-${attempt}-rejected-report.json`),
+        "utf8",
+      ),
+    );
+    expect(content).toMatchObject({
+      schemaVersion: "report-1",
+      origin: "model",
+      ruleVersion: "prompt-2",
+    });
+    expect(content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
+    expect(content.sections[0].blocks[0].blockId).toMatch(/^[\da-f-]{36}$/);
+    expect(content.focus.items[0].citations[0].quote).toBe("原文不存在的句子");
+    rejected.push(content);
+  }
+  expect(rejected[0].focus.gist.id).not.toBe(rejected[1].focus.gist.id);
+  expect(await readdir(run)).not.toContain("report.json");
+  expect(
+    usage.receipts.map((row: { finishReason: unknown }) => row.finishReason),
+  ).toEqual(["stop", "stop"]);
+  const retry = await qualityFiles(output, "stop", JSON.stringify(modelBody()));
+  expect(retry.validation.ok).toBe(true);
+  expect(retry.validation.rejectedAttempts).toHaveLength(1);
+  expect(await readdir(retry.run)).toEqual(
+    expect.arrayContaining(["attempt-1-rejected-report.json", "report.json"]),
+  );
+});
+test("质量脚本：合法 JSON 但结构错误仍保留解析内容", async () => {
+  const { run } = await qualityFiles('{"missing":"sections"}', "stop");
+  expect(
+    JSON.parse(
+      await readFile(path.join(run, "attempt-1-rejected-report.json"), "utf8"),
+    ),
+  ).toEqual({ missing: "sections" });
+});
+test.each(["原样", "JSON 转义"])(
+  "质量脚本：输出含%s假密钥时不写失败内容，validation 说明原因",
+  async (mode) => {
+    const output =
+      mode === "原样"
+        ? secret
+        : JSON.stringify({ leak: secret }).replace(
+            secret,
+            [...secret]
+              .map(
+                (char) =>
+                  String.fromCharCode(92) +
+                  "u" +
+                  char.charCodeAt(0).toString(16).padStart(4, "0"),
+              )
+              .join(""),
+          );
+    const { run, result, validation } = await qualityFiles(output, secret);
+    expect(JSON.stringify(result)).not.toContain(secret);
+    expect(await readdir(run)).toEqual(["usage.json", "validation.json"]);
+    expect(validation.rejectedAttempts).toHaveLength(2);
+    expect(validation.rejectedAttempts[0].omittedReason).toContain("含密钥");
+    for (const file of await readdir(run))
+      expect(await readFile(path.join(run, file), "utf8")).not.toContain(
+        secret,
+      );
+  },
+);
+test.each(["截断", "校验失败"])(
+  "HTTP：%s诊断不进入响应体、响应头或服务端日志",
+  async (mode) => {
+    const { options } = await setup();
+    const marker = "internal-rejected-content-only";
+    const body = JSON.parse(JSON.stringify(modelBody()));
+    body.focus.gist.text = marker;
+    body.focus.items[0].citations[0].quote = "原文不存在的句子";
+    const output =
+      mode === "截断" ? `{"private":"${marker}"` : JSON.stringify(body);
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const service = createAnalysisService({
+      ...options,
+      fetch: vi.fn<typeof fetch>(async () => reply(output, marker)),
+    });
+    const response = await createHandlers(service).POST(
+      new Request("http://localhost:3100/api/analysis", {
+        method: "POST",
+        headers: { Host: "localhost:3100", "Content-Type": "application/json" },
+        body: JSON.stringify(input()),
+      }),
+    );
+    expect(await response.text()).not.toContain(marker);
+    expect(JSON.stringify([...response.headers])).not.toContain(marker);
+    expect(
+      JSON.parse(response.headers.get("X-JDelight-Receipts")!)[0],
+    ).not.toHaveProperty("finishReason");
+    expect(log).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
   },
 );
 test("第十次以后、费用余额不足、冒烟两次用完均在请求前拒绝", async () => {

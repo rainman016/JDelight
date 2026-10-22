@@ -9,6 +9,7 @@ import { ReportCheckError, validateReport } from "../domain/report.ts";
 import { sourceLines } from "../domain/source.ts";
 import { readConfig, type ServerConfig } from "./config.ts";
 import { buildMessages } from "./prompt.ts";
+import { PROMPT_VERSION } from "./rules.ts";
 import {
   remainingUiCalls,
   LedgerError,
@@ -41,6 +42,14 @@ export type Receipt = Pick<
 export interface InternalResult {
   response: AnalysisResponse;
   receipts: Receipt[];
+  attempts: AttemptDiagnostic[];
+}
+export interface AttemptDiagnostic {
+  attempt: number;
+  finishReason: string | null;
+  rejected?:
+    { format: "json"; content: unknown } | { format: "text"; content: string };
+  omittedReason?: string;
 }
 interface Options {
   config?: () => Promise<ServerConfig | null>;
@@ -98,6 +107,8 @@ export function createAnalysisService(options: Options = {}) {
       signal?: AbortSignal,
     ): Promise<InternalResult> {
       const receipts: Receipt[] = [];
+      // 仅供本机质量脚本；HTTP 仍只序列化 response 和 receipts。
+      const attempts: AttemptDiagnostic[] = [];
       let config: ServerConfig | null = null;
       try {
         config = await configured();
@@ -105,6 +116,7 @@ export function createAnalysisService(options: Options = {}) {
           return {
             response: { ...message, reasons: [...message.reasons] },
             receipts,
+            attempts,
           };
         const source = analysisInputSchema.parse(input);
         if (
@@ -119,6 +131,7 @@ export function createAnalysisService(options: Options = {}) {
               reasons: ["原文行号或分区与全文不一致，未发起调用"],
             },
             receipts,
+            attempts,
           };
         const fullSource = {
           ...source,
@@ -160,9 +173,15 @@ export function createAnalysisService(options: Options = {}) {
                     reasons: [...retryReasons, error.message],
                   },
                   receipts,
+                  attempts,
                 };
               }
               const started = performance.now();
+              const diagnostic: AttemptDiagnostic = {
+                attempt: attempt + 1,
+                finishReason: null,
+              };
+              attempts.push(diagnostic);
               let outcome: Outcome = "network";
               let inputTokens: number | null = null,
                 outputTokens: number | null = null;
@@ -201,7 +220,7 @@ export function createAnalysisService(options: Options = {}) {
                   await result.body?.cancel();
                   throw new Error("request-failed");
                 }
-                // 限制返回体大小；不保存或打印模型原始返回。
+                // 限制返回体大小；失败内容仅经内部结果交给质量脚本。
                 const data = await readResponse(result);
                 const usage =
                   data && typeof data === "object" && "usage" in data
@@ -224,27 +243,54 @@ export function createAnalysisService(options: Options = {}) {
                 }
                 const choices =
                   data && typeof data === "object" && "choices" in data
-                    ? (data.choices as { message?: { content?: unknown } }[])
+                    ? (data.choices as {
+                        message?: { content?: unknown };
+                        finish_reason?: unknown;
+                      }[])
                     : [];
+                const finishReason = Array.isArray(choices)
+                  ? choices[0]?.finish_reason
+                  : null;
+                diagnostic.finishReason =
+                  typeof finishReason === "string" &&
+                  !finishReason.includes(currentConfig.apiKey)
+                    ? finishReason
+                    : null;
                 const text = Array.isArray(choices)
                   ? choices[0]?.message?.content
                   : null;
-                if (
-                  typeof text !== "string" ||
-                  text.includes(currentConfig.apiKey)
-                )
+                if (typeof text !== "string") throw new FormatFailure();
+                if (text.includes(currentConfig.apiKey)) {
+                  diagnostic.omittedReason = "模型输出含密钥，未写入失败内容";
                   throw new FormatFailure();
+                }
+                let rejected: AttemptDiagnostic["rejected"] = {
+                  format: "text",
+                  content: text,
+                };
                 try {
-                  const content = completeModelReport(
-                    JSON.parse(text),
-                    source.id,
-                  );
-                  if (JSON.stringify(content).includes(currentConfig.apiKey))
+                  const parsed: unknown = JSON.parse(text);
+                  if (JSON.stringify(parsed).includes(currentConfig.apiKey)) {
+                    diagnostic.omittedReason = "模型输出含密钥，未写入失败内容";
                     throw new FormatFailure();
+                  }
+                  // 若结构不合法而无法补齐，仍保留已解析的 JSON 供诊断。
+                  rejected = { format: "json", content: parsed };
+                  const content = completeModelReport(
+                    parsed,
+                    source.id,
+                    PROMPT_VERSION,
+                  );
+                  if (JSON.stringify(content).includes(currentConfig.apiKey)) {
+                    diagnostic.omittedReason = "模型输出含密钥，未写入失败内容";
+                    throw new FormatFailure();
+                  }
+                  rejected = { format: "json", content };
                   validateReport(content, fullSource);
                   outcome = "ok";
                   response = { ok: true, content };
                 } catch (error) {
+                  if (!diagnostic.omittedReason) diagnostic.rejected = rejected;
                   const checked = error instanceof ReportCheckError;
                   outcome = checked ? "check_failed" : "format_failed";
                   retryReasons = cleanReasons(
@@ -306,6 +352,7 @@ export function createAnalysisService(options: Options = {}) {
                     ],
                   },
                   receipts,
+                  attempts,
                 };
               }
               receipts.push(receipt(entry));
@@ -316,7 +363,7 @@ export function createAnalysisService(options: Options = {}) {
                 signal?.aborted ||
                 attempt === 1
               )
-                return { response, receipts };
+                return { response, receipts, attempts };
             }
             return {
               response: {
@@ -325,6 +372,7 @@ export function createAnalysisService(options: Options = {}) {
                 reasons: ["报告没有通过检查，未展示"],
               },
               receipts,
+              attempts,
             };
           },
         );
@@ -333,6 +381,7 @@ export function createAnalysisService(options: Options = {}) {
           return {
             response: { ok: false, kind: error.kind, reasons: [error.message] },
             receipts,
+            attempts,
           };
         return {
           response: {
@@ -345,6 +394,7 @@ export function createAnalysisService(options: Options = {}) {
             ],
           },
           receipts,
+          attempts,
         };
       }
     },
