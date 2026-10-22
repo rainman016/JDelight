@@ -19,5 +19,6 @@ test-results/
 
 # Secrets and local settings
 .env*
+!.env.example
 .DS_Store
 Thumbs.db

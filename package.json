@@ -19,7 +19,10 @@
     "test": "cross-env NEXT_TELEMETRY_DISABLED=1 vitest run",
     "test:install": "cross-env NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright install chromium",
     "test:e2e": "cross-env NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test",
-    "check": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"npm run typecheck && npm run lint && npm run test && npm run build && npm run test:e2e\""
+    "check": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"npm run typecheck && npm run lint && npm run test && npm run build && npm run scan:client && npm run test:e2e\"",
+    "quality": "node --experimental-transform-types --conditions=react-server --env-file-if-exists=.env.local scripts/quality.mjs",
+    "scan:client": "node scripts/scan-client.mjs",
+    "setup:env": "node --conditions=react-server scripts/setup-env.mjs"
   },
   "dependencies": {
     "@fontsource/instrument-serif": "5.3.0",
@@ -28,6 +31,7 @@
     "next": "16.4.2",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "server-only": "0.0.1",
     "three": "0.186.1",
     "zod": "4.6.7"
   },

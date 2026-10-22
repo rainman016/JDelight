@@ -70,7 +70,8 @@ export default function JobDetail({ id }: { id: string }) {
             {report ? (
               <>
                 <p className="report-version">
-                  报告第 {report.no} 版 · 示例分析
+                  报告第 {report.no} 版 ·{" "}
+                  {report.content.origin === "model" ? "真实分析" : "示例分析"}
                 </p>
                 <section className="brief-sheet">
                   <span className="tab-label">面试重点速览</span>

@@ -15,6 +15,13 @@ import {
   type Progress,
 } from "@/providers/mock";
 import { SourcePaper } from "@/components/source-paper";
+import {
+  analysisStatus,
+  analyzeWithModel,
+  AnalysisClientError,
+} from "@/providers/model/client";
+import type { AnalysisStatus, AnalysisFailureKind } from "@/domain/analysis";
+type Failure = { kind: AnalysisFailureKind | "save"; reasons: string[] };
 
 export default function NewJob({
   retry,
@@ -34,15 +41,33 @@ export default function NewJob({
     place: "",
   });
   const [error, setError] = useState("");
-  const [fail, setFail] = useState<{
-    kind: "check" | "save";
-    reasons: string[];
-  } | null>(null);
+  const [fail, setFail] = useState<Failure | null>(null);
+  const [status, setStatus] = useState<AnalysisStatus | null>(null);
+  const [useReal, setUseReal] = useState(false);
+  const [waitingSeconds, setWaitingSeconds] = useState(0);
+  useEffect(() => {
+    let mounted = true;
+    void analysisStatus().then((value) => {
+      if (mounted) setStatus(value);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
   const [progress, setProgress] = useState<Progress>({
     stage: 0,
     done: 0,
     total: 0,
   });
+  useEffect(() => {
+    if (step !== "analyzing" || !useReal || progress.stage !== 2) return;
+    const started = performance.now();
+    const timer = setInterval(
+      () => setWaitingSeconds(Math.floor((performance.now() - started) / 1000)),
+      1000,
+    );
+    return () => clearInterval(timer);
+  }, [step, useReal, progress.stage]);
   const [saved, setSaved] = useState(false);
   const jobRef = useRef<Job | null>(null);
   const requestId = useRef<string | null>(null);
@@ -50,9 +75,13 @@ export default function NewJob({
   const inFlight = useRef(false);
   const attempted = useRef(false);
   const runJob = useCallback(
-    async (existing?: Job) => {
+    async (existing?: Job, modeOverride?: boolean) => {
+      const mode = modeOverride ?? useReal;
       if (inFlight.current) return;
       inFlight.current = true;
+      setUseReal(mode);
+      setWaitingSeconds(0);
+      setProgress({ stage: 0, done: 0, total: 0 });
       const ctrl = new AbortController();
       active.current = ctrl;
       let job: Job | null = existing ?? jobRef.current;
@@ -83,9 +112,11 @@ export default function NewJob({
           return;
         }
         setStep("analyzing");
-        const content = await analyze(source, setProgress, ctrl.signal);
+        const content = mode
+          ? await analyzeWithModel(source, setProgress, ctrl.signal)
+          : await analyze(source, setProgress, ctrl.signal);
         ctrl.signal.throwIfAborted();
-        const shouldFail = demoFail && !attempted.current;
+        const shouldFail = !mode && demoFail && !attempted.current;
         attempted.current = true;
         savingReport = true;
         await repo.saveReport(
@@ -109,19 +140,27 @@ export default function NewJob({
           setStep("confirm");
           return;
         }
+        const clientError = cause instanceof AnalysisClientError ? cause : null;
         const check = cause instanceof ReportCheckError;
-        const reasons = check
-          ? [...new Set(cause.issues.map((i) => i.message))]
-          : [
-              cause instanceof Error &&
-              /另一个页面|基础分析已经/.test(cause.message)
-                ? cause.message
-                : savingReport
-                  ? "未保存，仍显示上一版本，可以重试"
-                  : "分析没有完成，可以重新分析。原文仍在本机。",
-            ];
+        const reasons = clientError
+          ? [...clientError.reasons]
+          : check
+            ? [...new Set(cause.issues.map((i) => i.message))]
+            : [
+                cause instanceof Error &&
+                /另一个页面|基础分析已经/.test(cause.message)
+                  ? cause.message
+                  : savingReport
+                    ? "未保存，仍显示上一版本，可以重试"
+                    : "分析没有完成，可以重新分析。原文仍在本机。",
+              ];
+        const failureKind = clientError?.kind ?? (check ? "check" : "save");
+        if (mode) setStatus(await analysisStatus());
         const latest = await repository()
-          .failAnalysis(job.id, { kind: check ? "check" : "save", reasons })
+          .failAnalysis(job.id, {
+            kind: failureKind === "config" ? "save" : failureKind,
+            reasons,
+          })
           .catch(() => {
             reasons.push(
               "失败状态没保存成功；已确认原文仍在本机，可以返回首页重试。",
@@ -131,13 +170,13 @@ export default function NewJob({
           router.replace(`/jobs/${job.id}`);
           return;
         }
-        setFail({ kind: check ? "check" : "save", reasons });
+        setFail({ kind: failureKind, reasons });
         setStep("fail");
       } finally {
         inFlight.current = false;
       }
     },
-    [demoFail, raw, meta, router],
+    [demoFail, raw, meta, router, useReal],
   );
   useEffect(() => {
     let mounted = true;
@@ -176,6 +215,9 @@ export default function NewJob({
     }
   };
   const index = step === "input" ? 0 : step === "confirm" ? 1 : 2;
+  const stages: readonly string[] = useReal
+    ? ["切分段落", "识别分区", "等待模型返回"]
+    : STAGES;
   return (
     <div className="app">
       <header className="topbar">
@@ -200,6 +242,10 @@ export default function NewJob({
               className="btn ghost"
               onClick={() => {
                 active.current?.abort();
+                if (useReal)
+                  setError(
+                    "已取消等待。已经发出的真实调用仍计次，原文已保留。",
+                  );
                 setStep("confirm");
               }}
             >
@@ -255,6 +301,25 @@ export default function NewJob({
                   {error}
                 </p>
               )}
+              {status?.available && (
+                <label className="real-switch">
+                  <input
+                    type="checkbox"
+                    role="switch"
+                    checked={useReal}
+                    onChange={(e) => setUseReal(e.target.checked)}
+                  />
+                  <span>
+                    用真实 AI 分析（还剩{" "}
+                    {Math.max(0, status.maxCalls - status.used)} 次）
+                  </span>
+                </label>
+              )}
+              {useReal && (
+                <p className="hint">
+                  真实分析会计次和费用；取消后，已经发出的调用仍计次。
+                </p>
+              )}
               <div className="btn-row">
                 {saved ? (
                   <Link href="/" className="btn">
@@ -292,13 +357,22 @@ export default function NewJob({
         {step === "analyzing" && (
           <section className="stage analyze-stage" aria-label="解析中">
             <div className="steps-wrap">
-              <h1 className="big-stage">{STAGES[progress.stage]}</h1>
+              <h1 className="big-stage">{stages[progress.stage]}</h1>
               <p className="big-count" role="status">
-                {progress.done}
-                <small>/ {progress.total} 行</small>
+                {useReal && progress.stage === 2 ? (
+                  <>
+                    {waitingSeconds}
+                    <small>秒 · 已等待</small>
+                  </>
+                ) : (
+                  <>
+                    {progress.done}
+                    <small>/ {progress.total} 行</small>
+                  </>
+                )}
               </p>
               <ol className="steps">
-                {STAGES.map((label, i) => (
+                {stages.map((label, i) => (
                   <li
                     key={label}
                     data-state={
@@ -312,60 +386,35 @@ export default function NewJob({
                     <span className="step-mark" aria-hidden="true" />
                     <span>{label}</span>
                     <span className="step-count">
-                      {i <= progress.stage
-                        ? `${i < progress.stage ? progress.total : progress.done} / ${progress.total} 行`
-                        : ""}
+                      {useReal && i === 2
+                        ? progress.stage === 2
+                          ? `${waitingSeconds} 秒`
+                          : ""
+                        : i <= progress.stage
+                          ? `${i < progress.stage ? progress.total : progress.done} / ${progress.total} 行`
+                          : ""}
                     </span>
                   </li>
                 ))}
               </ol>
               <p className="hint">
-                每一步对应真实处理的行数。解析使用本地规则，未调用 AI 模型。
+                {useReal
+                  ? "前两个步骤在本机处理原文；等待时间按实际秒数显示。取消会中止请求，但已发出的调用仍计次。"
+                  : "每一步对应真实处理的行数。解析使用本地规则，未调用 AI 模型。"}
               </p>
             </div>
             <SourcePaper lines={lines} label="正在解析 · 原文" />
           </section>
         )}
         {step === "fail" && (
-          <section className="stage fail-stage" aria-live="polite">
-            <div className="fail-card">
-              <span className="fail-tag">
-                {fail?.kind === "check" ? "没通过检查" : "没有完成"}
-              </span>
-              <h1 className="fail-title">
-                {fail?.kind === "check"
-                  ? "这次分析没通过检查，没有展示"
-                  : "这次分析没有保存成功"}
-              </h1>
-              <p className="fail-lead">
-                引用必须和原文一字不差，要求的程度不能被改写。
-              </p>
-              <ul className="fail-list">
-                {(fail?.reasons ?? [error]).map((reason) => (
-                  <li key={reason}>{reason}</li>
-                ))}
-              </ul>
-              <div className="btn-row">
-                <Link className="btn" href="/">
-                  先保存原文，稍后再试
-                </Link>
-                {saved && (
-                  <button
-                    type="button"
-                    className="btn primary"
-                    onClick={() => void runJob()}
-                  >
-                    重新分析
-                  </button>
-                )}
-              </div>
-              {saved && (
-                <p className="hint">
-                  你确认过的原文已经在本机，不会因为这次失败丢失。
-                </p>
-              )}
-            </div>
-          </section>
+          <FailureView
+            fail={fail ?? { kind: "save", reasons: [error] }}
+            saved={saved}
+            status={status}
+            useReal={useReal}
+            onRetry={() => void runJob()}
+            onMock={() => void runJob(undefined, false)}
+          />
         )}
       </main>
     </div>
@@ -523,6 +572,79 @@ function InputView({
                   ? `还差 ${40 - chars} 个字才能开始。`
                   : "先粘贴一份岗位描述，或用示例看看效果。")}
         </p>
+      </div>
+    </section>
+  );
+}
+
+function FailureView({
+  fail,
+  saved,
+  status,
+  useReal,
+  onRetry,
+  onMock,
+}: {
+  fail: Failure;
+  saved: boolean;
+  status: AnalysisStatus | null;
+  useReal: boolean;
+  onRetry: () => void;
+  onMock: () => void;
+}) {
+  const quota = fail.kind === "quota";
+  return (
+    <section className="stage fail-stage" aria-live="polite">
+      <div className="fail-card">
+        <span className="fail-tag">
+          {quota
+            ? "次数已用完"
+            : fail.kind === "save"
+              ? "没有完成"
+              : "没通过检查"}
+        </span>
+        <h1 className="fail-title">
+          {quota
+            ? "本机的真实分析次数已用完"
+            : fail.kind === "save"
+              ? "这次分析没有保存成功"
+              : "这次分析没通过检查，没有展示"}
+        </h1>
+        <p className="fail-lead">
+          {quota
+            ? status
+              ? `本机上限 ${status.maxCalls} 次、¥${status.maxCostCny}，已用 ${status.used} 次、约 ¥${status.costUsedCny.toFixed(4)}，不会自动恢复。`
+              : "本机真实分析受次数与金额上限约束，不会自动恢复。"
+            : "引用必须和原文一字不差，要求的程度不能被改写。"}
+        </p>
+        <ul className="fail-list">
+          {fail.reasons.map((reason) => (
+            <li key={reason}>{reason}</li>
+          ))}
+        </ul>
+        <div className="btn-row">
+          <Link className="btn" href="/">
+            {quota ? "只保存原文" : "先保存原文，稍后再试"}
+          </Link>
+          {saved &&
+            (quota ? (
+              <button type="button" className="btn primary" onClick={onMock}>
+                用示例分析看看效果
+              </button>
+            ) : (
+              <button type="button" className="btn primary" onClick={onRetry}>
+                重新分析
+                {useReal && status
+                  ? `（还剩 ${Math.max(0, status.maxCalls - status.used)} 次）`
+                  : ""}
+              </button>
+            ))}
+        </div>
+        {saved && (
+          <p className="hint">
+            你确认过的原文已经在本机，不会因为这次失败丢失。
+          </p>
+        )}
       </div>
     </section>
   );
