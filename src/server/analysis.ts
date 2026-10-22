@@ -140,11 +140,28 @@ export function createAnalysisService(options: Options = {}) {
               const requestSignal = signal
                 ? AbortSignal.any([signal, timeout])
                 : timeout;
-              const entry = await reserve(
-                currentConfig.ledgerPath,
-                ledger,
-                purpose,
-              );
+              let entry: LedgerEntry;
+              try {
+                entry = await reserve(
+                  currentConfig.ledgerPath,
+                  ledger,
+                  purpose,
+                );
+              } catch (error) {
+                if (
+                  !(error instanceof LedgerError) ||
+                  retryReasons.length === 0
+                )
+                  throw error;
+                return {
+                  response: {
+                    ok: false,
+                    kind: error.kind,
+                    reasons: [...retryReasons, error.message],
+                  },
+                  receipts,
+                };
+              }
               const started = performance.now();
               let outcome: Outcome = "network";
               let inputTokens: number | null = null,

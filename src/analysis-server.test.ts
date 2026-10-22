@@ -177,6 +177,29 @@ test("预记账写入失败不发请求，也不删除同名已有临时文件",
   expect(await readFile(`${file}.${id}.tmp`, "utf8")).toBe("existing-file");
   expect((await readLedger(file)).entries).toHaveLength(0);
 });
+test("最后一次校验不合格且重试额度耗尽，保留检查原因与额度原因", async () => {
+  const { file, options } = await setup([entry("smoke")]);
+  const invalid = JSON.parse(JSON.stringify(modelBody()));
+  invalid.focus.items[0].citations[0].quote = "不存在的原文引用";
+  const send = vi.fn<typeof fetch>(async () => reply(JSON.stringify(invalid)));
+  const result = await createAnalysisService({
+    ...options,
+    fetch: send,
+  }).analyze(input());
+  expect(result.response).toMatchObject({ ok: false, kind: "quota" });
+  if (!result.response.ok)
+    expect(result.response.reasons).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/引用和原文对不上/),
+        expect.stringMatching(/施工冒烟最多 2 次/),
+      ]),
+    );
+  expect(result.response).not.toHaveProperty("content");
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(result.receipts[0].result).toBe("check_failed");
+  expect((await readLedger(file)).entries).toHaveLength(2);
+  expect(JSON.stringify(result)).not.toContain(secret);
+});
 test("pending 保守记费；损坏、缺失和锁定的账本拒绝调用", async () => {
   expect(
     summarize({
