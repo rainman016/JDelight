@@ -52,6 +52,7 @@ export const modelReportSchema = reportContentSchema
 export function completeModelReport(
   input: unknown,
   sourceVersionId: string,
+  ruleVersion: string,
 ): ReportContent {
   const parsed = modelReportSchema.parse(input);
   function fill(value: unknown): unknown {
@@ -70,6 +71,6 @@ export function completeModelReport(
     schemaVersion: "report-1",
     sourceVersionId,
     origin: "model",
-    ruleVersion: "prompt-1",
+    ruleVersion,
   });
 }

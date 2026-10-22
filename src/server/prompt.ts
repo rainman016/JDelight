@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { modelReportSchema } from "../domain/model-report.ts";
 import type { AnalysisInput } from "../domain/analysis.ts";
-import { WRITING_RULES } from "./rules.ts";
+import { PROMPT_VERSION, WRITING_RULES } from "./rules.ts";
 import { MAX_INPUT_TOKENS } from "./pricing.ts";
 export function buildMessages(
   source: AnalysisInput,
@@ -15,7 +15,7 @@ export function buildMessages(
   const messages = [
     {
       role: "system",
-      content: `提示词版本：prompt-1\n${WRITING_RULES}\nJSON 结构：${schema}`,
+      content: `提示词版本：${PROMPT_VERSION}\n${WRITING_RULES}\nJSON 结构：${schema}`,
     },
     {
       role: "user",
