@@ -169,6 +169,9 @@ export function createAnalysisService(options: Options = {}) {
                       model: currentConfig.model,
                       messages,
                       response_format: { type: "json_object" },
+                      // DeepSeek 默认开启高强度思考；本机 90 秒 JSON 分析显式关闭。
+                      // https://api-docs.deepseek.com/guides/thinking_mode/（2026-10-22）
+                      thinking: { type: "disabled" },
                       max_tokens: MAX_OUTPUT_TOKENS,
                       temperature: 0.2,
                       stream: false,

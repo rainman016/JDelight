@@ -103,6 +103,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
     expect((await readLedger(file)).entries[0].result).toBe("pending");
     const body = JSON.parse(init!.body as string);
     expect(body.model).toBe("deepseek-flash");
+    expect(body.thinking).toEqual({ type: "disabled" });
     expect(body.messages[0].content).toContain("prompt-1");
     expect(body.messages[1].content).toContain("lineNo");
     return reply();
