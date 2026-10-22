@@ -106,8 +106,10 @@ export function createRepository(db: JDelightDatabase) {
           : undefined;
         if (job.currentReportVersionId && !report)
           throw new Error("报告没有读取成功，原文仍在本机");
-        if (report) validateReport(report.content, source);
-        return { job, source, report };
+        const storedReport = report
+          ? reportVersionSchema.parse(report)
+          : undefined;
+        return { job, source, report: storedReport };
       },
     );
   return {

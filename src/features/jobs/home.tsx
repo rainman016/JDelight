@@ -316,7 +316,9 @@ function JobCard({
       )}
       <footer className="job-foot">
         <span className={`ver${ready ? "" : " pending"}`}>
-          {report ? `报告第 ${report.no} 版 · 基础分析` : "待分析"}
+          {report
+            ? `报告第 ${report.no} 版 · ${report.content.origin === "model" ? "真实分析" : "示例分析"}`
+            : "待分析"}
         </span>
         <time className="seen" dateTime={job.lastViewedAt}>
           {new Date(job.lastViewedAt).toLocaleDateString("zh-CN", {

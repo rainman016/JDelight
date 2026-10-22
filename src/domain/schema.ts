@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { kindSchema, reportContentSchema } from "./report";
+import { kindSchema, reportContentSchema } from "./report.ts";
 const id = z.string().min(1);
 const iso = z.iso.datetime();
 export const markSchema = z.enum(["preparing", "interviewed", "dropped"]);
