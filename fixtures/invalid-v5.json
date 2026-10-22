@@ -1,0 +1,710 @@
+{
+  "schemaVersion": "report-1",
+  "sourceVersionId": "fixture-source",
+  "origin": "mock",
+  "ruleVersion": "rules-1",
+  "header": {
+    "shown": [
+      {
+        "id": "cond1",
+        "text": "本科及以上",
+        "citations": [
+          {
+            "lineNo": 12,
+            "quote": "本科及以上学历"
+          }
+        ]
+      },
+      {
+        "id": "cond2",
+        "text": "2 年以上互联网产品经验",
+        "citations": [
+          {
+            "lineNo": 12,
+            "quote": "2 年以上互联网产品经验"
+          }
+        ]
+      },
+      {
+        "id": "cond3",
+        "text": "试用期 3 个月",
+        "citations": [
+          {
+            "lineNo": 23,
+            "quote": "试用期 3 个月"
+          }
+        ]
+      }
+    ],
+    "missing": ["薪资数字（原文写面议）", "团队规模", "汇报对象"]
+  },
+  "focus": {
+    "gist": {
+      "id": "gist",
+      "text": "名为“初级”，实际是要一个人从想法推到上线，并对指标负责。",
+      "kind": "inference",
+      "citations": [
+        {
+          "lineNo": 1,
+          "quote": "初级 AI Agent 产品经理"
+        },
+        {
+          "lineNo": 6,
+          "quote": "推动 Agent 能力上线"
+        },
+        {
+          "lineNo": 8,
+          "quote": "搭建评测集"
+        }
+      ]
+    },
+    "items": [
+      {
+        "id": "focus0",
+        "text": "怎么理解 Agent 的 Prompt、工具调用和工作流——这是职责和要求里都出现的重点。",
+        "kind": "inference",
+        "basis": "职责第 2 条与要求第 2 条都涉及这些技术，因此是准备重点。",
+        "citations": [
+          {
+            "lineNo": 6,
+            "quote": "梳理 Prompt、工具调用与工作流"
+          },
+          {
+            "lineNo": 13,
+            "quote": "了解 Prompt Engineering、RAG、Function Calling 等技术"
+          }
+        ]
+      },
+      {
+        "id": "focus1",
+        "text": "怎么衡量一个 Agent 好不好：准确率、转人工率分别说明什么。",
+        "kind": "speculation",
+        "basis": "从评测职责推测可能会问指标含义，并非招聘方公布的题目。",
+        "citations": [
+          {
+            "lineNo": 8,
+            "quote": "搭建评测集，跟踪回答准确率、转人工率等指标"
+          }
+        ]
+      },
+      {
+        "id": "focus2",
+        "text": "拿一个场景讲：用 SQL 看哪些数据，怎么定位体验问题。",
+        "kind": "speculation",
+        "basis": "职责与要求均提到 SQL，据此推测可能让你举场景。",
+        "citations": [
+          {
+            "lineNo": 7,
+            "quote": "使用 SQL 和数据看板分析用户行为"
+          },
+          {
+            "lineNo": 14,
+            "quote": "熟练使用 SQL"
+          }
+        ]
+      },
+      {
+        "id": "focus3",
+        "text": "“2 年以上”与“初级”并列：经验线到底划在哪里，需要在面试里确认。",
+        "kind": "inference",
+        "basis": "岗位名称与年限并列，具体期望仍需确认。",
+        "citations": [
+          {
+            "lineNo": 1,
+            "quote": "初级 AI Agent 产品经理"
+          },
+          {
+            "lineNo": 12,
+            "quote": "2 年以上互联网产品经验"
+          }
+        ]
+      }
+    ]
+  },
+  "sections": [
+    {
+      "key": "positioning",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "pos1",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "pos-common",
+              "text": "一般的初级产品经理，日常是写需求、跟进开发和上线。",
+              "kind": "common",
+              "citations": []
+            },
+            {
+              "id": "pos-design",
+              "text": "这个岗位前面要自己做设计，后面要搭评测集、盯指标。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 5,
+                  "quote": "产品设计，输出需求文档与交互方案"
+                },
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockId": "pos2",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "pos-owner",
+              "text": "“负责”“推动”“搭建”出现在设计、上线、评测上，说明这三件事由岗位主导；“协作”出现在与算法、研发共事上。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 5,
+                  "quote": "负责客服与知识库场景"
+                },
+                {
+                  "lineNo": 6,
+                  "quote": "与算法、研发协作"
+                },
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "thresholds",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "thr1",
+          "type": "requirement",
+          "phrase": "2 年以上互联网产品经验",
+          "strength": "listed",
+          "degree": "",
+          "note": {
+            "id": "thr1-note",
+            "text": "与“初级”并列，偏向有一定经验的人，具体线要问。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 12,
+                "quote": "2 年以上互联网产品经验"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 12,
+              "quote": "2 年以上互联网产品经验"
+            }
+          ]
+        },
+        {
+          "blockId": "thr2",
+          "type": "requirement",
+          "phrase": "有 B 端或 AI 产品经验者优先",
+          "strength": "preferred",
+          "degree": "",
+          "note": {
+            "id": "thr2-note",
+            "text": "原文已写“优先”，不要读成必备。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 12,
+                "quote": "有 B 端或 AI 产品经验者优先"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 12,
+              "quote": "有 B 端或 AI 产品经验者优先"
+            }
+          ]
+        },
+        {
+          "blockId": "thr3",
+          "type": "requirement",
+          "phrase": "熟悉大模型基本原理",
+          "strength": "listed",
+          "degree": "熟悉",
+          "note": {
+            "id": "thr3-note",
+            "text": "要求知道概念并能讲清，不能把“了解”升级为自行实现。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 13,
+                "quote": "熟悉大模型基本原理，了解 Prompt Engineering、RAG、Function Calling 等技术"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 13,
+              "quote": "熟悉大模型基本原理，了解 Prompt Engineering、RAG、Function Calling 等技术"
+            }
+          ]
+        },
+        {
+          "blockId": "thr4",
+          "type": "requirement",
+          "phrase": "熟练使用 SQL",
+          "strength": "required",
+          "degree": "熟练",
+          "note": {
+            "id": "thr4-note",
+            "text": "程度词最重；职责也要求用它分析行为。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 14,
+                "quote": "熟练使用 SQL"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 14,
+              "quote": "熟练使用 SQL"
+            }
+          ]
+        },
+        {
+          "blockId": "thr5",
+          "type": "requirement",
+          "phrase": "能够独立撰写 PRD 并推动跨部门项目落地",
+          "strength": "listed",
+          "degree": "独立",
+          "note": {
+            "id": "thr5-note",
+            "text": "“独立”“推动”是主导口吻。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 15,
+                "quote": "能够独立撰写 PRD 并推动跨部门项目落地"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 15,
+              "quote": "能够独立撰写 PRD 并推动跨部门项目落地"
+            }
+          ]
+        },
+        {
+          "blockId": "thr6",
+          "type": "requirement",
+          "phrase": "有 Agent 平台（Coze、Dify 等）搭建经验",
+          "strength": "preferred",
+          "degree": "",
+          "note": {
+            "id": "thr6-note",
+            "text": "单列加分，不升级为门槛。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 19,
+                "quote": "有 Agent 平台（Coze、Dify 等）搭建经验"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 19,
+              "quote": "有 Agent 平台（Coze、Dify 等）搭建经验"
+            }
+          ]
+        },
+        {
+          "blockId": "thr7",
+          "type": "requirement",
+          "phrase": "熟悉 Python",
+          "strength": "preferred",
+          "degree": "熟悉",
+          "note": {
+            "id": "thr7-note",
+            "text": "单列加分，不升级为门槛。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 20,
+                "quote": "熟悉 Python"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 20,
+              "quote": "熟悉 Python"
+            }
+          ]
+        },
+        {
+          "blockId": "thr8",
+          "type": "requirement",
+          "phrase": "有 AIGC 应用从 0 到 1 的落地经验",
+          "strength": "preferred",
+          "degree": "",
+          "note": {
+            "id": "thr8-note",
+            "text": "单列加分，不升级为门槛。",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 21,
+                "quote": "有 AIGC 应用从 0 到 1 的落地经验"
+              }
+            ]
+          },
+          "citations": [
+            {
+              "lineNo": 21,
+              "quote": "有 AIGC 应用从 0 到 1 的落地经验"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "implicit",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "imp1",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "implicit1",
+              "text": "评测是重心，但要求里没有专门一条；面试仍可能问思路。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集"
+                },
+                {
+                  "lineNo": 13,
+                  "quote": "熟悉大模型基本原理"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockId": "imp2",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "implicit2",
+              "text": "数据分析出现两次，说明它是工作方式，不只是技能项。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 7,
+                  "quote": "使用 SQL 和数据看板分析用户行为"
+                },
+                {
+                  "lineNo": 14,
+                  "quote": "具备良好的数据分析能力"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockId": "imp3",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "implicit3",
+              "text": "节奏紧，但“较快”“必要时”“阶段性”都不是具体数字。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 16,
+                  "quote": "较快的业务节奏，必要时需配合加班和阶段性出差"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "capabilities",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "cap1",
+          "type": "capability",
+          "name": "Agent 产品设计",
+          "importance": "high",
+          "meaning": [
+            {
+              "id": "cap1meaning",
+              "text": "把“让 AI 办一件事”拆成提示词、工具与出错处理，并写成研发能照着做的方案。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 5,
+                  "quote": "产品设计，输出需求文档与交互方案"
+                },
+                {
+                  "lineNo": 6,
+                  "quote": "梳理 Prompt、工具调用与工作流"
+                }
+              ]
+            },
+            {
+              "id": "cap1common",
+              "text": "通常产出是需求文档和流程图。",
+              "kind": "common",
+              "citations": []
+            }
+          ]
+        },
+        {
+          "blockId": "cap2",
+          "type": "capability",
+          "name": "数据与评测",
+          "importance": "high",
+          "meaning": [
+            {
+              "id": "cap2meaning",
+              "text": "用固定问题反复测，看回答对不对、何时需要转人工，从数字里找到问题。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集，跟踪回答准确率、转人工率等指标"
+                }
+              ]
+            },
+            {
+              "id": "cap2common",
+              "text": "常见指标包括准确率、转人工率、一次解决率。",
+              "kind": "common",
+              "citations": []
+            }
+          ]
+        },
+        {
+          "blockId": "cap3",
+          "type": "capability",
+          "name": "推动落地",
+          "importance": "medium",
+          "meaning": [
+            {
+              "id": "cap3meaning",
+              "text": "在算法、研发之间把事情协调到上线，不只写文档。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 6,
+                  "quote": "与算法、研发协作"
+                },
+                {
+                  "lineNo": 15,
+                  "quote": "推动跨部门项目落地"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "scenarios",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "scene1",
+          "type": "scenario",
+          "scene": "客服与知识库",
+          "product": {
+            "id": "scene-product",
+            "text": "可能是回答用户问题的客服助手、查找内部文档的助手。",
+            "kind": "speculation",
+            "citations": [
+              {
+                "lineNo": 5,
+                "quote": "客服与知识库场景"
+              }
+            ]
+          },
+          "difficulty": {
+            "id": "scene-difficulty",
+            "text": "可能需要保证回答准确，遇到不会的要知道转人工。",
+            "kind": "speculation",
+            "citations": [
+              {
+                "lineNo": 8,
+                "quote": "回答准确率、转人工率"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "preparation",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "prep1",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "prep-evidence",
+              "text": "最需要拿出一个自己做过、带指标的 AI 小项目，说清怎么判断它好不好。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockId": "prep2",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "prep-min",
+              "text": "用 Coze 或 Dify 搭问答助手，写 10 个测试问题，记录答错的几条。",
+              "kind": "inference",
+              "citations": [
+                {
+                  "lineNo": 19,
+                  "quote": "Agent 平台（Coze、Dify 等）"
+                },
+                {
+                  "lineNo": 8,
+                  "quote": "搭建评测集"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "blockId": "prep3",
+          "type": "paragraph",
+          "claims": [
+            {
+              "id": "prep-common",
+              "text": "没有相关经历时，可以用课程或个人项目讲清怎么发现问题、怎么改。",
+              "kind": "common",
+              "citations": []
+            }
+          ]
+        },
+        {
+          "blockId": "probe0",
+          "type": "probe",
+          "claim": {
+            "id": "probe-claim0",
+            "text": "你怎么给一个 Agent 设计评测集？",
+            "kind": "inference",
+            "citations": [
+              {
+                "lineNo": 8,
+                "quote": "搭建评测集"
+              }
+            ]
+          }
+        },
+        {
+          "blockId": "probe1",
+          "type": "probe",
+          "claim": {
+            "id": "probe-claim1",
+            "text": "回答准确率下降，你先查什么？",
+            "kind": "speculation",
+            "citations": [
+              {
+                "lineNo": 8,
+                "quote": "回答准确率"
+              }
+            ]
+          }
+        },
+        {
+          "blockId": "probe2",
+          "type": "probe",
+          "claim": {
+            "id": "probe-claim2",
+            "text": "一个功能研发说做不了，你怎么办？",
+            "kind": "speculation",
+            "citations": [
+              {
+                "lineNo": 6,
+                "quote": "与算法、研发协作"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "key": "toConfirm",
+      "status": "filled",
+      "blocks": [
+        {
+          "blockId": "ask1",
+          "type": "question",
+          "question": "这个岗位更看重过往年限，还是做事能力？",
+          "why": "“初级”与“2 年以上”并列，影响投递和讲经历。",
+          "citations": [
+            {
+              "lineNo": 1,
+              "quote": "初级 AI Agent 产品经理"
+            },
+            {
+              "lineNo": 12,
+              "quote": "2 年以上互联网产品经验"
+            }
+          ]
+        },
+        {
+          "blockId": "ask2",
+          "type": "question",
+          "question": "一个月大概加班多少、出差几次？",
+          "why": "“必要时”“阶段性”没有量化，影响时间安排。",
+          "citations": [
+            {
+              "lineNo": 16,
+              "quote": "必要时需配合加班和阶段性出差"
+            }
+          ]
+        },
+        {
+          "blockId": "ask3",
+          "type": "question",
+          "question": "试用期和转正后的薪资范围分别是多少？",
+          "why": "薪资只写面议，试用期 3 个月，无法判断是否可接受。",
+          "citations": [
+            {
+              "lineNo": 23,
+              "quote": "薪资待遇：面议，试用期 3 个月。"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

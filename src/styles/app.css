@@ -1,0 +1,465 @@
+:root {
+  --cream: #fffdf5;
+  --warning: #fdf1ec;
+  --warning-ink: #7a3a1f;
+  --note-yellow: #fff3a8;
+  --note-mint: #d8ecdd;
+  --note-peach: #fbdccf;
+  --note-blue: #dbe7f4;
+  --kind-inference: #fff3a8;
+  --kind-inference-ink: #6b5a10;
+  --kind-speculation: #fbe3d8;
+  --kind-speculation-ink: var(--clay);
+  --kind-common: #dbe7f4;
+  --kind-common-ink: #2c4f78;
+  --kind-source: var(--mint);
+  --kind-source-ink: var(--green);
+  --serif:
+    "Instrument Serif", "Source Han Serif SC", "Noto Serif SC", "Songti SC",
+    "STSong", Georgia, serif;
+  --hand: "JDelight Notes", "STKaiti", "KaiTi", "Kaiti SC", cursive;
+  color-scheme: light;
+}
+body {
+  position: relative;
+  isolation: isolate;
+  font-size: 16px;
+}
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  z-index: -1;
+  pointer-events: none;
+}
+body::before {
+  left: -14vmax;
+  top: -16vmax;
+  width: 46vmax;
+  height: 40vmax;
+  background: var(--mint-2);
+  opacity: 0.5;
+  border-radius: 58% 42% 63% 37% / 46% 55% 45% 54%;
+}
+body::after {
+  right: -16vmax;
+  bottom: -20vmax;
+  width: 50vmax;
+  height: 42vmax;
+  background: var(--clay-soft);
+  opacity: 0.85;
+  border-radius: 41% 59% 38% 62% / 57% 40% 60% 43%;
+}
+a {
+  color: var(--green);
+}
+a.btn,
+a.back,
+a.job-open {
+  text-decoration: none;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea {
+  touch-action: manipulation;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+.topbar {
+  height: auto;
+  min-height: 64px;
+  background: var(--paper);
+  backdrop-filter: none;
+  border-bottom: 0;
+}
+.wordmark {
+  font-size: 26px;
+  transform: rotate(-2deg);
+}
+.back {
+  font-size: 14px;
+  white-space: nowrap;
+}
+.btn {
+  min-height: 44px;
+  height: auto;
+  justify-content: center;
+  line-height: 1.4;
+  padding-top: 9px;
+  padding-bottom: 9px;
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.filter,
+.stamp,
+.menu button,
+.del,
+.note-add {
+  min-height: 44px;
+}
+.job-foot {
+  flex-wrap: wrap;
+}
+.job-title,
+.job-where,
+.job-gist,
+.note-mini,
+.focus li,
+.pl-text,
+.d-title {
+  overflow-wrap: anywhere;
+}
+.job-title {
+  padding-right: 0;
+}
+.job-open {
+  color: var(--ink);
+}
+.job[data-mark="已放弃"] {
+  opacity: 1;
+}
+.stamp[data-mark="已面试"] {
+  background: var(--note-yellow);
+}
+.menu {
+  top: calc(100% + 6px);
+}
+.note-edit {
+  font-family: var(--hand);
+}
+.inline-error {
+  color: var(--clay);
+  font-size: 14px;
+}
+.local-footer {
+  margin: 64px 0 0;
+  font: 14px / 1.7 var(--hand);
+  color: var(--ink-3);
+}
+.hint {
+  font: 15px / 1.6 var(--hand);
+  color: var(--ink-2);
+}
+.loading {
+  max-width: 1240px;
+  margin: auto;
+  padding: 60px 24px;
+}
+.editor-col,
+.hero,
+.cf-side,
+.paper,
+.steps-wrap {
+  min-width: 0;
+}
+.editor-foot {
+  flex-wrap: wrap;
+}
+.lit-layer,
+.editor textarea {
+  font-size: 16px;
+  font-weight: 400;
+}
+.lit-layer mark.lit {
+  font-weight: 400;
+}
+.editor textarea:focus-visible {
+  outline: none;
+}
+.poster .ln:nth-child(2) {
+  padding-left: 0.9em;
+}
+.poster .ln:nth-child(3) {
+  padding-left: 0.25em;
+}
+.poster em {
+  background-size: 100% 100%;
+  animation: none;
+}
+.meters li {
+  min-width: 0;
+}
+.meters b {
+  opacity: 1;
+}
+.cf-field {
+  grid-template-columns: 64px minmax(0, 1fr);
+}
+.cf-field input {
+  width: 100%;
+  min-height: 44px;
+}
+.paper-lines {
+  padding: 6px 0 14px;
+}
+.paper .pl {
+  font-size: 14px;
+  line-height: 1.8;
+}
+.cf-line {
+  grid-template-columns: 48px 26px minmax(0, 1fr);
+}
+.pl-tag {
+  white-space: nowrap;
+}
+.cf-paper {
+  background: var(--cream);
+}
+.pl-text {
+  white-space: pre-wrap;
+}
+.step-count {
+  opacity: 1;
+}
+.fail-card {
+  background: var(--cream);
+}
+.detail-main {
+  max-width: 1120px;
+  padding: 36px 40px 80px;
+  margin: auto;
+}
+.d-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 24px;
+}
+.d-title {
+  margin: 0;
+  font: 900 clamp(32px, 4.4vw, 56px) / 1.25 var(--serif);
+  text-wrap: balance;
+}
+.d-where {
+  color: var(--ink-2);
+  margin: 12px 0 0;
+}
+.detail-mark {
+  padding-top: 8px;
+  flex: none;
+}
+.detail-mark .stamp-wrap {
+  position: relative;
+  top: auto;
+  right: auto;
+}
+.report-version {
+  margin: 22px 0 36px;
+  color: var(--green);
+  font-size: 14px;
+}
+.brief-sheet {
+  background: var(--cream);
+  padding: 38px 34px 28px;
+  position: relative;
+  max-width: 880px;
+  border-radius: 3px 3px 3px 26px / 3px 3px 3px 18px;
+  box-shadow: var(--shadow);
+}
+.tab-label {
+  top: -16px;
+  left: 22px;
+  position: absolute;
+  padding: 4px 16px;
+  color: var(--sheet);
+  background: var(--green);
+  border-radius: 12px 12px 12px 4px;
+  transform: rotate(-2deg);
+  font-size: 14px;
+}
+.gist-text {
+  font: 24px / 1.6 var(--hand);
+  margin: 0 0 20px;
+  color: var(--green);
+}
+.focus {
+  margin: 0;
+  padding-left: 24px;
+}
+.focus li {
+  padding: 8px 0 18px 4px;
+}
+.focus li p {
+  margin: 0 0 8px;
+}
+.focus-basis {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.focus-m {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+.kind,
+.cite {
+  display: inline-flex;
+  padding: 1px 7px;
+  font-size: 12.5px;
+  border-radius: 5px;
+}
+.kind-inference {
+  background: var(--kind-inference);
+  color: var(--kind-inference-ink);
+}
+.kind-speculation {
+  background: var(--kind-speculation);
+  color: var(--kind-speculation-ink);
+}
+.cite {
+  color: var(--green);
+  border: 1px solid var(--green);
+}
+@media (max-width: 1020px) {
+  .input-stage {
+    gap: 40px;
+  }
+  .scribble {
+    display: none;
+  }
+}
+@media (max-width: 899px) {
+  .input-stage,
+  .analyze-stage,
+  .confirm-stage {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
+    padding: 24px 16px 64px;
+    min-height: 0;
+  }
+  .cf-side,
+  .steps-wrap {
+    position: static;
+  }
+  .poster {
+    font-size: clamp(42px, 10vw, 68px);
+  }
+  .hero {
+    max-width: 600px;
+  }
+  .lead {
+    font-size: 16px;
+  }
+  .meters {
+    margin: 24px 0;
+    gap: 10px;
+  }
+  .meters li:nth-child(n) {
+    padding: 12px;
+    transform: none;
+  }
+  .editor {
+    transform: none;
+  }
+  .editor-body {
+    height: 300px;
+  }
+  .editor-foot {
+    padding: 12px;
+    gap: 8px;
+  }
+  .editor-foot .stat {
+    width: 100%;
+  }
+  .editor-foot .spacer {
+    display: none;
+  }
+  .editor-foot kbd {
+    display: none;
+  }
+  .paper {
+    max-height: 65vh;
+    transform: none;
+  }
+  .cf-paper {
+    max-height: none;
+  }
+  .topbar {
+    padding: 8px 14px;
+    gap: 12px;
+  }
+  .local-note {
+    display: none;
+  }
+  .crumbs .crumb {
+    padding: 3px 8px;
+  }
+  .crumb:not([aria-current]) {
+    display: none;
+  }
+  .fail-card {
+    padding: 32px 20px 24px;
+    transform: none;
+  }
+  .detail-main {
+    padding: 24px 16px 64px;
+  }
+  .d-head {
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .brief-sheet {
+    padding: 32px 20px 20px;
+  }
+  .gist-text {
+    font-size: 21px;
+  }
+  .home .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .job-foot {
+    gap: 6px;
+  }
+  .toast {
+    width: max-content;
+    max-width: calc(100vw - 32px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+  .main {
+    animation: fade 200ms ease;
+  }
+  .job,
+  .card-wrap:nth-child(n) .job,
+  .paper,
+  .editor,
+  .editor:focus-within,
+  .poster,
+  .cf-title,
+  .home-title,
+  .filter,
+  .stamp,
+  .steps li,
+  .steps li:nth-child(n),
+  .note-mini,
+  .hand-big,
+  .brief-sheet,
+  .tab-label {
+    transform: none !important;
+    transition-property: color, opacity, background-color, border-color;
+    animation: none;
+  }
+  .cards.piled .job:hover {
+    transform: none;
+  }
+  .btn:active {
+    transform: none;
+  }
+}

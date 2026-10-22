@@ -1,0 +1,855 @@
+/* ---------- 开场（拼贴 + 柔软） ---------- */
+@property --ang {
+  syntax: "<angle>";
+  inherits: true;
+  initial-value: 0deg;
+}
+@property --r {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 0px;
+}
+@property --n {
+  syntax: "<integer>";
+  inherits: true;
+  initial-value: 0;
+}
+.intro {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background: var(--paper);
+  --px: 0;
+  --py: 0;
+  --R: min(410px, 44vw);
+}
+.glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+      circle,
+      rgba(34, 92, 70, 0.12) 1px,
+      transparent 1.4px
+    )
+    0 0 / 28px 28px;
+}
+.blobA {
+  position: absolute;
+  left: -14vmax;
+  top: -12vmax;
+  width: 46vmax;
+  height: 40vmax;
+  background: var(--mint-2);
+  opacity: 0.75;
+  border-radius: 58% 42% 63% 37% / 46% 55% 45% 54%;
+  filter: blur(2px);
+  animation: blobA 18s ease-in-out infinite alternate;
+}
+.blobB {
+  position: absolute;
+  right: -16vmax;
+  bottom: -18vmax;
+  width: 52vmax;
+  height: 44vmax;
+  background: var(--clay-soft);
+  opacity: 0.95;
+  border-radius: 41% 59% 38% 62% / 57% 40% 60% 43%;
+  animation: blobB 22s ease-in-out infinite alternate;
+}
+@keyframes blobA {
+  to {
+    transform: translate(4vmax, 3vmax) rotate(8deg) scale(1.06);
+    border-radius: 46% 54% 50% 50% / 58% 44% 56% 42%;
+  }
+}
+@keyframes blobB {
+  to {
+    transform: translate(-3vmax, -4vmax) rotate(-6deg) scale(1.05);
+    border-radius: 55% 45% 52% 48% / 44% 58% 42% 56%;
+  }
+}
+.intro-top {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22px 28px;
+}
+.intro-brand {
+  font: 700 22px / 1 var(--serif);
+  color: var(--green);
+  transform: rotate(-2deg);
+  display: inline-block;
+}
+.intro-note {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.stack {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  perspective: 1700px;
+  cursor: pointer;
+}
+.scene {
+  position: absolute;
+  left: 50%;
+  top: 28%;
+  width: min(540px, 80vw);
+  height: 0;
+  transform: translate(-50%, 0) rotateX(calc(var(--py) * -8deg))
+    rotateY(calc(var(--px) * 14deg));
+  transform-style: preserve-3d;
+  transition: transform 500ms var(--ease-out);
+}
+
+/* 地面 */
+.floor {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+}
+.shadow {
+  position: absolute;
+  left: -44vmin;
+  top: 306px;
+  width: 88vmin;
+  height: 84px;
+  background: radial-gradient(
+    ellipse at center,
+    rgba(34, 92, 70, 0.3),
+    transparent 68%
+  );
+  filter: blur(6px);
+  animation: shadow-in 700ms var(--ease-out) 0.35s backwards;
+}
+@keyframes shadow-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+.ripple {
+  position: absolute;
+  left: -250px;
+  top: 312px;
+  width: 500px;
+  height: 66px;
+  border: 2px solid rgba(47, 122, 94, 0.5);
+  border-radius: 50%;
+  opacity: 0;
+  animation: ripple 1100ms var(--ease-out) 0.5s backwards;
+}
+.ripple.r2 {
+  animation-delay: 0.68s;
+  border-width: 1px;
+}
+@keyframes ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+.beam {
+  position: absolute;
+  left: -380px;
+  top: 270px;
+  width: 760px;
+  height: 230px;
+  background: radial-gradient(
+    ellipse at 50% 0,
+    rgba(47, 122, 94, 0.32),
+    rgba(198, 223, 206, 0.28) 45%,
+    transparent 72%
+  );
+  filter: blur(8px);
+  opacity: 0;
+  animation: beam-in 900ms ease var(--s, 1.6s) forwards;
+}
+@keyframes beam-in {
+  to {
+    opacity: 1;
+  }
+}
+
+/* 窗口：歪着，圆角大，标题是贴在左上角的标签条 */
+.win-drop {
+  display: block;
+  transform-style: preserve-3d;
+  position: relative;
+  z-index: 1;
+}
+.win-hop {
+  display: block;
+  position: relative;
+  transform-style: preserve-3d;
+  transform-origin: 50% 100%;
+  animation: wobble 1600ms var(--ease-out) 0.52s backwards;
+}
+@keyframes wobble {
+  0% {
+    transform: none;
+  }
+  9% {
+    transform: rotateZ(5deg) rotateX(5deg) scale(1.05, 0.93) skewX(2.5deg);
+  }
+  22% {
+    transform: rotateZ(-4.5deg) rotateX(-3.5deg) scale(0.97, 1.05) skewX(-2deg);
+  }
+  38% {
+    transform: rotateZ(3deg) rotateX(2deg) scale(1.02, 0.98) skewX(1.2deg);
+  }
+  54% {
+    transform: rotateZ(-1.8deg) scale(0.99, 1.01);
+  }
+  72% {
+    transform: rotateZ(0.8deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+.win {
+  position: relative;
+  display: block;
+  text-align: left;
+  background: var(--sheet);
+  border-radius: 30px 26px 34px 24px;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(-2.2deg);
+}
+.win .win-bar {
+  position: absolute;
+  left: 22px;
+  top: -15px;
+  height: 30px;
+  padding: 0 16px;
+  background: var(--green);
+  border: 0;
+  border-radius: 12px 12px 12px 4px;
+  transform: rotate(-3deg);
+  box-shadow: 0 6px 12px -4px rgba(34, 92, 70, 0.5);
+  z-index: 2;
+}
+.win .win-bar i {
+  display: none;
+}
+.win .win-title {
+  margin: 0;
+  font: 600 12px var(--sans);
+  color: #fff;
+}
+.win-body {
+  position: relative;
+  display: block;
+  padding: 34px 26px 24px;
+  font-size: 13.5px;
+  line-height: 2;
+  color: var(--ink-2);
+  overflow: hidden;
+  border-radius: inherit;
+}
+.jl {
+  display: block;
+}
+.jl[data-head="true"] {
+  margin-top: 4px;
+  font: 700 13px var(--serif);
+  color: var(--ink);
+}
+.jt {
+  background: none;
+  color: inherit;
+  padding: 0 4px;
+  margin: 0 -2px;
+  border-radius: 42% 58% 46% 54% / 62% 48% 52% 38%;
+  animation: lit 360ms var(--ease-out) var(--d, 0s) both;
+}
+.jt.skill {
+  --lc: var(--mint-2);
+  --lt: var(--green);
+}
+.jt.risk {
+  --lc: transparent;
+  --lt: var(--clay);
+  text-decoration: underline wavy var(--clay) 1.5px;
+  text-underline-offset: 5px;
+}
+@keyframes lit {
+  from {
+    background-color: transparent;
+  }
+  to {
+    background-color: var(--lc);
+    color: var(--lt);
+    font-weight: 600;
+  }
+}
+.scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: var(--green-2);
+  box-shadow: 0 0 14px 3px rgba(47, 122, 94, 0.35);
+  opacity: 0;
+  animation: scan var(--t, 1.8s) cubic-bezier(0.77, 0, 0.175, 1) var(--s, 1.5s)
+    both;
+}
+.scan::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 48px;
+  background: linear-gradient(to top, rgba(198, 223, 206, 0.55), transparent);
+}
+@keyframes scan {
+  0% {
+    top: 0;
+    opacity: 1;
+  }
+  96% {
+    opacity: 1;
+  }
+  100% {
+    top: 100%;
+    opacity: 0;
+  }
+}
+.note {
+  position: absolute;
+  right: -34px;
+  bottom: -22px;
+  width: 118px;
+  padding: 12px 12px 14px;
+  background: #fff3a8;
+  font: 12.5px / 1.5 var(--sans);
+  color: #5a4a10;
+  box-shadow: 0 10px 18px -6px rgba(0, 0, 0, 0.25);
+  transform: rotate(6deg);
+  z-index: 3;
+  opacity: 0;
+  animation: stick 520ms var(--ease-out) var(--s, 3.5s) forwards;
+}
+.note::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -9px;
+  width: 46px;
+  height: 16px;
+  margin-left: -23px;
+  background: rgba(198, 223, 206, 0.8);
+  transform: rotate(-3deg);
+}
+@keyframes stick {
+  from {
+    opacity: 0;
+    transform: translateY(-40px) rotate(-14deg) scale(1.25);
+  }
+  to {
+    opacity: 1;
+    transform: rotate(6deg);
+  }
+}
+
+/* 显影：像照片被抛在地上 */
+.prints {
+  position: absolute;
+  left: 50%;
+  top: 372px;
+  width: 0;
+  height: 0;
+  transform: rotateX(54deg);
+  transform-style: preserve-3d;
+}
+.print {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 150px;
+  height: 128px;
+  padding: 12px 14px;
+  background: #fff;
+  border: 6px solid #fff;
+  border-radius: 10px;
+  box-shadow: 0 14px 24px -8px rgba(29, 36, 32, 0.28);
+  transform: translate(-50%, 0) rotateZ(var(--rot));
+  animation: toss 760ms var(--ease-out) var(--d, 2s) backwards;
+}
+.print.mint {
+  background: var(--mint);
+  border-color: #fff;
+}
+.print.clay {
+  background: var(--clay-soft);
+}
+@keyframes toss {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translate(-50%, -150px) rotateZ(0deg) scale(0.5);
+  }
+}
+.pk {
+  display: block;
+  font: 600 17px var(--sans);
+  color: var(--green);
+}
+.print.clay .pk {
+  color: var(--clay);
+}
+.pn {
+  display: block;
+  font: 900 66px / 1.05 var(--serif);
+  color: var(--green);
+  counter-reset: num var(--n);
+  animation: count 1400ms var(--ease-out) calc(var(--d, 2s) + 0.2s) backwards;
+}
+.print.clay .pn {
+  color: var(--clay);
+}
+.pn::after {
+  content: counter(num);
+}
+@keyframes count {
+  from {
+    --n: 0;
+  }
+}
+
+/* 环绕：大小、倾斜、颜色各不相同的词 */
+.ring {
+  position: absolute;
+  left: 50%;
+  top: 150px;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: rotateX(-13deg) rotateZ(2deg);
+  animation: orbit 26s linear 2.2s infinite;
+}
+@keyframes orbit {
+  to {
+    --ang: 360deg;
+  }
+}
+.slot {
+  --r: var(--R);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  transform-style: preserve-3d;
+  transform: translateY(var(--y)) rotateY(calc(var(--ang) + var(--base)))
+    translateZ(var(--r));
+  animation: spawn 900ms var(--ease-out) var(--d, 0s) backwards;
+}
+@keyframes spawn {
+  from {
+    --r: 0px;
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+.chip3 {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 0.35em 1em;
+  font-weight: 600;
+  white-space: nowrap;
+  border-radius: 999px;
+  color: var(--green);
+  background: var(--mint);
+  box-shadow: 0 8px 14px -6px rgba(29, 36, 32, 0.3);
+  transform: translate(-50%, -50%)
+    rotateY(calc((var(--ang) + var(--base)) * -1)) rotateZ(var(--tilt, 0deg));
+}
+.chip3.ink {
+  background: var(--green);
+  color: #fff;
+}
+.chip3.white {
+  background: #fff;
+}
+.chip3.clay {
+  background: var(--clay-soft);
+  color: var(--clay);
+}
+.chip3.dash {
+  background: transparent;
+  border: 1.5px dashed var(--ink-3);
+  color: var(--ink-2);
+  box-shadow: none;
+}
+.stack:hover .ring,
+.stack:focus-within .ring {
+  animation-play-state: paused;
+}
+
+.intro-hint {
+  position: absolute;
+  z-index: 3;
+  left: 0;
+  right: 0;
+  bottom: 30px;
+  margin: 0;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-3);
+}
+.reveal {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  background: var(--paper);
+  clip-path: circle(0 at 50% var(--gy, 86%));
+  pointer-events: none;
+}
+.intro[data-leaving="true"] .reveal {
+  clip-path: circle(160vmax at 50% var(--gy, 86%));
+  transition: clip-path 560ms var(--ease-out) 1300ms;
+}
+.intro[data-leaving="true"] .ring {
+  opacity: 0;
+  transition: opacity 180ms ease;
+  animation-play-state: paused;
+}
+.intro[data-leaving="true"] .prints,
+.intro[data-leaving="true"] .beam,
+.intro[data-leaving="true"] .note,
+.intro[data-leaving="true"] .shadow,
+.intro[data-leaving="true"] .ripple {
+  opacity: 0;
+  transition: opacity 200ms ease;
+  animation: none;
+}
+.intro[data-leaving="true"] .win-hop {
+  animation: none;
+}
+.spill {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+}
+.sp {
+  position: absolute;
+  left: 50%;
+  margin-left: -0.5em;
+  font: 900 1em / 1 var(--serif);
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  text-shadow: 0 6px 10px rgba(29, 36, 32, 0.15);
+}
+.sp.g {
+  color: var(--green);
+}
+.sp.k {
+  color: var(--ink);
+}
+.sp.c {
+  color: var(--clay);
+}
+
+@media (max-width: 520px) {
+  .intro-note {
+    display: none;
+  }
+  .chip3 {
+    font-size: 11px;
+    padding: 4px 9px;
+  }
+  .note {
+    right: -8px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-hop,
+  .scan,
+  .jt,
+  .ring,
+  .slot,
+  .shadow,
+  .ripple,
+  .beam,
+  .print,
+  .pn,
+  .note {
+    animation: none;
+  }
+  .note {
+    opacity: 1;
+  }
+  .ripple {
+    display: none;
+  }
+  .jt.skill {
+    background: var(--mint-2);
+    color: var(--green);
+  }
+  .scene {
+    transition: none;
+  }
+  .intro[data-leaving="true"] .reveal {
+    transition: none;
+  }
+}
+/* Only the intro owns these overrides. Other pages retain layout and colors. */
+.intro {
+  --clay: #a9431f;
+}
+.intro .scan {
+  box-shadow: none;
+}
+.intro .jt.risk {
+  background: transparent;
+}
+.intro .jt.risk {
+  animation-name: risk-ink;
+}
+@keyframes risk-ink {
+  from {
+    text-decoration-color: transparent;
+    color: inherit;
+  }
+  to {
+    text-decoration-color: var(--clay);
+    color: var(--clay);
+  }
+}
+.intro .beam,
+.intro .glow {
+  display: none;
+}
+.intro .note {
+  font-family: var(--hand);
+  color: var(--ink);
+  transform: rotate(3deg);
+}
+.intro .chip3 {
+  border-radius: 14px 10px 16px 8px;
+}
+.intro .scene {
+  width: min(540px, 80%);
+}
+.intro[data-renderer="three"] .scene {
+  visibility: hidden;
+}
+.intro[data-renderer="three"] .scene,
+.intro[data-renderer="three"] .scene * {
+  animation-play-state: paused !important;
+}
+/* Rasterize each soft organic shape once; let the compositor move/deform the layer. */
+.intro .blobA {
+  animation-name: intro-blob-a;
+  will-change: transform;
+  filter: none;
+  opacity: 1;
+  background: color-mix(in srgb, var(--mint-2) 75%, var(--paper));
+}
+.intro .blobB {
+  animation-name: intro-blob-b;
+  will-change: transform;
+  opacity: 1;
+  background: color-mix(in srgb, var(--clay-soft) 95%, var(--paper));
+}
+@keyframes intro-blob-a {
+  to {
+    transform: translate(4vmax, 3vmax) rotate(8deg) scale(1.06) skewX(2deg);
+  }
+}
+@keyframes intro-blob-b {
+  to {
+    transform: translate(-3vmax, -4vmax) rotate(-6deg) scale(1.05) skewY(-2deg);
+  }
+}
+.intro-webgl,
+.intro-dom {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.intro-dom {
+  perspective: 1200px;
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+}
+.intro-dom > * {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform-origin: center;
+}
+.intro-dom .webgl-window {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  box-shadow: 0 10px 28px -15px rgb(34 92 70 / 18%);
+}
+.intro-dom .webgl-window .win-bar {
+  transform: rotate(-3deg);
+}
+.intro-dom .note {
+  animation: none;
+  opacity: 1;
+  visibility: hidden;
+}
+.intro-dom .webgl-print {
+  display: block;
+  padding: 12px 14px;
+  border: 6px solid white;
+  border-radius: 9px;
+  background: white;
+  text-align: left;
+  box-shadow: 0 12px 22px -12px rgb(29 36 32 / 22%);
+}
+.intro-dom .webgl-print.mint {
+  background: var(--mint);
+}
+.intro-dom .webgl-print.clay {
+  background: var(--clay-soft);
+}
+.intro-dom .webgl-count {
+  display: block;
+  font: 900 66px / 1.05 var(--serif);
+  color: var(--green);
+}
+.intro-dom .clay .pk,
+.intro-dom .clay .webgl-count {
+  color: var(--clay);
+}
+.intro-dom .webgl-chip {
+  left: 50%;
+  top: 50%;
+  margin: 0;
+  box-shadow: 0 6px 12px -7px rgb(29 36 32 / 18%);
+  will-change: transform;
+}
+.intro-dom .webgl-glyph {
+  margin: 0;
+  opacity: 0;
+}
+.intro[data-leaving="true"] .intro-dom .note {
+  visibility: hidden;
+}
+.intro[data-leaving="true"] .reveal {
+  transition-delay: 1450ms;
+  transition-duration: 450ms;
+}
+.intro[data-rendering="paused"] .blobA,
+.intro[data-rendering="paused"] .blobB {
+  animation-play-state: paused;
+}
+@media (max-width: 599px) {
+  .intro {
+    --R: min(135px, 34vw);
+  }
+  .intro .scene {
+    width: 78%;
+  }
+  .intro .win,
+  .intro .note {
+    transform: none;
+  }
+  .intro .win .win-bar {
+    transform: none;
+  }
+  .intro .win-body {
+    padding: 28px 16px 18px;
+    font-size: 11.5px;
+    line-height: 1.9;
+  }
+  .intro .win-title {
+    font-size: 10px;
+  }
+  .intro .note {
+    width: 100px;
+    font-size: 12px;
+  }
+  .intro-dom .webgl-print {
+    padding: 6px 8px;
+    border-width: 5px;
+  }
+  .intro-dom .webgl-count {
+    font-size: 36px;
+  }
+  .intro .prints {
+    top: 340px;
+  }
+  .intro .print {
+    top: calc(var(--y) * 0.33);
+    transform: translate(-50%, 0);
+    width: 88px;
+  }
+  .intro .print:nth-child(1) {
+    left: -125px;
+  }
+  .intro .print:nth-child(2) {
+    left: -42px;
+  }
+  .intro .print:nth-child(3) {
+    left: 42px;
+  }
+  .intro .print:nth-child(4) {
+    left: 125px;
+  }
+  .intro[data-renderer="css"] .chip3 {
+    font-size: 11px !important;
+    padding: 4px 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro .jt.risk {
+    animation: none;
+    text-decoration-color: var(--clay);
+  }
+  .intro .blobA,
+  .intro .blobB {
+    animation: none;
+    will-change: auto;
+  }
+}
+
+/* 独立的透明按钮保留整张窗口的命中区域，装饰文字不成为按钮名称。 */
+.intro-enter {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 4;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
