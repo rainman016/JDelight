@@ -13,6 +13,10 @@ import { Brief, ReportBody } from "./report-content";
 import { ReportExport } from "./report-export";
 import { ReportVersions } from "./report-versions";
 import { useCitation } from "./use-citation";
+import { useQuestions } from "./use-questions";
+import { ReportActions } from "./report-actions";
+import { QuestionDock } from "./question-dock";
+import { QuestionList } from "./question-list";
 
 type Data = Awaited<ReturnType<ReturnType<typeof repository>["readJob"]>>;
 type Tab = "report" | "brief";
@@ -85,9 +89,17 @@ export default function JobDetail({ id }: { id: string }) {
     (item) => item.id === printable?.sourceVersionId,
   );
   const readonly = !!report && report.id !== data?.job.currentReportVersionId;
+  const questions = useQuestions({
+    jobId: id,
+    report,
+    readonly,
+    onNotice: setNotice,
+    onVersion: () => setSelectedId(null),
+  });
   const switchTab = (next: Tab) => {
     setTab(next);
     clearCitation();
+    questions.close();
   };
   return (
     <div className="job-detail">
@@ -139,11 +151,13 @@ export default function JobDetail({ id }: { id: string }) {
                       onSelect={(versionId) => {
                         setSelectedId(versionId);
                         clearCitation();
+                        questions.close();
                       }}
                     />
                   )}
                 </div>
                 <div className="detail-mark">
+                  <span className="jd-mark-label">我的标记</span>
                   <MarkMenu
                     mark={data.job.mark}
                     onChange={async (mark) => {
@@ -169,6 +183,7 @@ export default function JobDetail({ id }: { id: string }) {
                         onClick={() => {
                           setSelectedId(null);
                           clearCitation();
+                          questions.close();
                         }}
                       >
                         回到当前第 {data.report?.no} 版
@@ -222,68 +237,101 @@ export default function JobDetail({ id }: { id: string }) {
                     activeId={active?.id}
                     onPick={(next) => pickCitation(next, tab === "brief")}
                   >
-                    <div
-                      id="report-panel"
-                      role="tabpanel"
-                      aria-labelledby={`tab-${tab}`}
-                      tabIndex={0}
+                    <ReportActions
+                      actions={
+                        readonly
+                          ? null
+                          : {
+                              askBlock: questions.askBlock,
+                              changeNote: questions.changeNote,
+                            }
+                      }
                     >
                       <div
-                        className={
-                          tab === "report" ? "jd-grid" : "jd-brief-grid"
+                        id="report-panel"
+                        role="tabpanel"
+                        aria-labelledby={`tab-${tab}`}
+                        tabIndex={0}
+                        onMouseUp={(event) =>
+                          questions.capture(event.currentTarget)
+                        }
+                        onKeyUp={(event) =>
+                          questions.capture(event.currentTarget)
+                        }
+                        onTouchEnd={(event) =>
+                          questions.capture(event.currentTarget)
                         }
                       >
-                        {tab === "report" && (
-                          <aside
-                            className="jd-source"
-                            aria-label="JD 原文"
-                            ref={sourcePanel}
-                            tabIndex={-1}
-                          >
-                            <span className="jd-source-label">
-                              原文 · {source.lines.length} 行
-                            </span>
-                            <div
-                              className="jd-source-scroll"
-                              ref={scrollRef}
-                              tabIndex={0}
-                              aria-label="滚动阅读 JD 原文"
+                        <div
+                          className={
+                            tab === "report" ? "jd-grid" : "jd-brief-grid"
+                          }
+                        >
+                          {tab === "report" && (
+                            <aside
+                              className="jd-source"
+                              aria-label="JD 原文"
+                              ref={sourcePanel}
+                              tabIndex={-1}
                             >
-                              {source.lines.map((line) => (
-                                <p
-                                  key={line.lineNo}
-                                  ref={(element) =>
-                                    registerLine(line.lineNo, element)
-                                  }
-                                  data-line={line.lineNo}
-                                  data-highlighted={
-                                    active?.citation.lineNo === line.lineNo
-                                  }
-                                  data-heading={line.heading}
-                                  className="jd-source-line"
-                                >
-                                  <span
-                                    className="jd-line-no"
-                                    aria-label={`第 ${line.lineNo} 行`}
+                              <span className="jd-source-label">
+                                原文 · {source.lines.length} 行
+                              </span>
+                              <div
+                                className="jd-source-scroll"
+                                ref={scrollRef}
+                                tabIndex={0}
+                                aria-label="滚动阅读 JD 原文"
+                              >
+                                {source.lines.map((line) => (
+                                  <p
+                                    key={line.lineNo}
+                                    ref={(element) =>
+                                      registerLine(line.lineNo, element)
+                                    }
+                                    data-line={line.lineNo}
+                                    data-highlighted={
+                                      active?.citation.lineNo === line.lineNo
+                                    }
+                                    data-heading={line.heading}
+                                    className="jd-source-line"
                                   >
-                                    {line.lineNo}
-                                  </span>
-                                  <span>{line.text || "\u00a0"}</span>
-                                </p>
-                              ))}
+                                    <span
+                                      className="jd-line-no"
+                                      aria-label={`第 ${line.lineNo} 行`}
+                                    >
+                                      {line.lineNo}
+                                    </span>
+                                    <span>{line.text || "\u00a0"}</span>
+                                  </p>
+                                ))}
+                              </div>
+                              <p className="jd-source-tip">
+                                点报告里的出处，原文里的依据会亮起来
+                              </p>
+                            </aside>
+                          )}
+                          {tab === "report" ? (
+                            <div className="jd-report-column">
+                              <ReportBody report={report} />
+                              {!readonly && (
+                                <QuestionList
+                                  notes={data.supplements}
+                                  onOpen={questions.openNote}
+                                />
+                              )}
                             </div>
-                            <p className="jd-source-tip">
-                              点报告里的出处，原文里的依据会亮起来
-                            </p>
-                          </aside>
-                        )}
-                        {tab === "report" ? (
-                          <ReportBody report={report} />
-                        ) : (
-                          <Brief report={report} />
-                        )}
+                          ) : (
+                            <Brief
+                              report={report}
+                              questions={
+                                readonly ? report.supplements : data.supplements
+                              }
+                            />
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </ReportActions>
                   </CitationProvider>
                 </>
               ) : (
@@ -298,6 +346,26 @@ export default function JobDetail({ id }: { id: string }) {
           )}
         </main>
       </div>
+      {questions.selection && !readonly && (
+        <button
+          type="button"
+          className="jd-ask-floating"
+          style={{ left: questions.selection.x, top: questions.selection.y }}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={questions.openSelection}
+        >
+          问一问
+        </button>
+      )}
+      {questions.target && !readonly && (
+        <QuestionDock
+          key={questions.target.initial?.id ?? questions.target.anchor.exact}
+          jobId={id}
+          target={questions.target}
+          onClose={questions.close}
+          onAdd={questions.addNote}
+        />
+      )}
       {thread && (
         <svg className="jd-thread" aria-hidden="true">
           <path d={thread.d} />

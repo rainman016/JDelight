@@ -1,0 +1,308 @@
+.jd-report-column {
+  min-width: 0;
+}
+.job-detail .detail-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.jd-mark-label {
+  font: 400 15px var(--hand);
+  color: var(--ink-2);
+}
+.jd-ask-section {
+  margin-left: auto;
+  padding: 6px 4px;
+  min-height: 44px;
+  font: 400 13px var(--sans);
+  color: var(--green);
+  background: transparent;
+  border: 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  white-space: nowrap;
+}
+.jd-ask-floating {
+  position: fixed;
+  z-index: 65;
+  min-height: 44px;
+  padding: 6px 16px;
+  color: var(--sheet);
+  background: var(--ink);
+  border: 0;
+  border-radius: 10px 14px 10px 14px;
+  box-shadow: var(--shadow);
+}
+.jd-question-dock {
+  position: fixed;
+  z-index: 70;
+  right: 24px;
+  bottom: 24px;
+  width: min(400px, calc(100vw - 32px));
+  max-height: calc(100dvh - 90px);
+  overflow-y: auto;
+  padding: 24px 22px 18px;
+  background: var(--cream);
+  border-radius: 3px 3px 3px 22px / 3px 3px 3px 14px;
+  box-shadow: var(--shadow-lg);
+  transform: rotate(-0.6deg);
+  overflow-wrap: anywhere;
+}
+.jd-question-dock h2 {
+  margin: 0 36px 14px 0;
+  font: 900 24px / 1.4 var(--serif);
+}
+.jd-dock-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  font-size: 25px;
+  color: var(--ink-3);
+}
+.jd-dock-selected {
+  max-height: 120px;
+  overflow: auto;
+  padding: 10px 12px;
+  margin: 0 0 16px;
+  color: var(--ink-2);
+  font: 400 14px / 1.75 var(--sans);
+  background: var(--paper);
+  border-left: 3px solid var(--mint-2);
+  white-space: pre-wrap;
+}
+.jd-dock-selected span {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: var(--green);
+}
+.jd-question-label {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.jd-question-label textarea,
+.jd-note-edit {
+  width: 100%;
+  min-height: 96px;
+  padding: 10px 12px;
+  resize: vertical;
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  color: var(--ink);
+  background: var(--sheet);
+  font: 400 16px / 1.7 var(--sans);
+}
+.jd-dock-question {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+.jd-answer-kind {
+  margin: 0 0 4px;
+  color: var(--kind-common-ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.jd-dock-answer {
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.jd-dock-error {
+  color: var(--clay);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.jd-dock-foot {
+  margin: 14px 0 0;
+  font: 400 14px / 1.7 var(--hand);
+  color: var(--ink-2);
+}
+.jd-questions {
+  margin-top: 38px;
+}
+.jd-question-list {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: grid;
+  gap: 16px;
+}
+.jd-question-list li {
+  padding: 14px 16px;
+  background: var(--note-yellow);
+  border-radius: 3px 3px 3px 16px;
+  box-shadow: var(--shadow);
+  overflow-wrap: anywhere;
+}
+.jd-question-list li[data-unanswered="true"] {
+  background: var(--sheet);
+  border: 1px dashed var(--clay);
+  box-shadow: none;
+}
+.jd-question-list strong {
+  display: block;
+  font-size: 16px;
+}
+.jd-question-list p {
+  margin: 6px 0;
+  font: 400 17px / 1.8 var(--hand);
+}
+.jd-question-list .jd-note-selection,
+.jd-supplements .jd-note-selection {
+  margin: 6px 0;
+  color: var(--ink-2);
+  font: 400 13px / 1.7 var(--sans);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.jd-note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.jd-note-actions .jd-link {
+  padding: 4px 8px;
+}
+.jd-link.danger {
+  color: var(--clay);
+}
+.jd-brief-focus {
+  list-style: decimal;
+}
+.jd-backup-reminder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 24px;
+  padding: 10px 16px;
+  color: #7a3a1f;
+  background: var(--clay-soft);
+  border: 1px dashed #c99079;
+  border-radius: 14px 18px 12px 16px;
+  font: 400 15px / 1.8 var(--hand);
+}
+.jd-backup-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 18px;
+}
+.jd-backup-options section {
+  padding: 18px 16px;
+  background: var(--note-yellow);
+  box-shadow: var(--shadow);
+  border-radius: 3px 3px 3px 16px;
+  transform: rotate(-0.7deg);
+}
+.jd-backup-options section + section {
+  background: var(--note-mint);
+  transform: rotate(0.7deg);
+}
+.jd-backup-options h3 {
+  margin: 0 0 10px;
+  font: 900 20px / 1.5 var(--serif);
+}
+.jd-backup-options p {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.8;
+}
+.jd-backup-options .jd-backup-small,
+.jd-backup-small {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.jd-import-choices {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+.jd-import-choices label {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--sheet);
+  border: 1px solid var(--line-2);
+  border-radius: 12px 16px 12px 16px;
+  cursor: pointer;
+}
+.jd-import-choices label[data-on="true"] {
+  border-color: var(--green);
+  background: var(--mint);
+}
+.jd-import-choices input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  margin: 5px 0 0;
+  accent-color: var(--green);
+}
+.jd-import-choices span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  font-size: 16px;
+}
+.jd-import-choices small {
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.7;
+}
+.btn.danger {
+  color: var(--sheet);
+  background: var(--clay);
+  border-color: var(--clay);
+}
+.home .topbar {
+  gap: 12px;
+}
+@media (max-width: 899px) {
+  .jd-question-dock {
+    right: 16px;
+    bottom: 16px;
+    padding: 22px 20px 16px;
+  }
+  .jd-backup-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .jd-backup-options section {
+    transform: none;
+  }
+  .home .topbar {
+    padding: 0 12px;
+    gap: 6px;
+  }
+  .home .topbar .btn {
+    padding-left: 10px;
+    padding-right: 10px;
+    font-size: 13px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .jd-question-dock,
+  .jd-backup-options section,
+  .jd-backup-options section + section {
+    transform: none;
+  }
+}
+@media print {
+  .jd-question-dock,
+  .jd-ask-floating {
+    display: none !important;
+  }
+}

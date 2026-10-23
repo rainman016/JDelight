@@ -45,17 +45,25 @@ export const jobSchema = z.strictObject({
   lastViewedAt: iso,
 });
 export type Job = z.infer<typeof jobSchema>;
-export const anchorSchema = z.strictObject({
-  blockId: id,
-  start: z.number().int().nonnegative(),
-  end: z.number().int().nonnegative(),
-  exact: z.string(),
-  prefix: z.string(),
-  suffix: z.string(),
-  reportVersionId: id,
-  sourceVersionId: id,
-  offsetUnit: z.literal("utf16"),
-});
+export const anchorSchema = z
+  .strictObject({
+    blockId: id,
+    start: z.number().int().nonnegative(),
+    end: z.number().int().nonnegative(),
+    exact: z.string(),
+    prefix: z.string(),
+    suffix: z.string(),
+    reportVersionId: id,
+    sourceVersionId: id,
+    offsetUnit: z.literal("utf16"),
+  })
+  .refine(
+    (anchor) =>
+      anchor.end > anchor.start &&
+      anchor.end - anchor.start === anchor.exact.length &&
+      !!anchor.exact.trim(),
+    "选中文字范围不完整",
+  );
 export const supplementSnapshotSchema = z.strictObject({
   supplementId: id,
   question: z.string(),

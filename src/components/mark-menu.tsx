@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import { MARKS, type Mark } from "@/domain/schema";
+import { Chevron } from "./chevron";
 export function MarkMenu({
   mark,
   onChange,
@@ -76,7 +77,7 @@ export function MarkMenu({
           }
         }}
       >
-        {MARKS[mark]} <span aria-hidden="true">⌄</span>
+        {MARKS[mark]} <Chevron />
       </button>
       {open && (
         <ul id={id} className="menu" role="menu" aria-label="我的标记">

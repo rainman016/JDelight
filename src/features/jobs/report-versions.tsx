@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReportVersion } from "@/domain/schema";
 import { reportDate } from "@/domain/report-presentation";
+import { Chevron } from "@/components/chevron";
 export function ReportVersions({
   versions,
   currentId,
@@ -78,7 +79,7 @@ export function ReportVersions({
           报告第 {selected.no} 版 ·{" "}
           {selected.content.origin === "model" ? "真实分析" : "示例分析"}
         </span>
-        <span aria-hidden="true">⌄</span>
+        <Chevron />
       </button>
       {open && (
         <ul className="jd-version-menu" role="menu" aria-label="报告版本">

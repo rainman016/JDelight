@@ -1,12 +1,15 @@
 import { Fragment } from "react";
 import type { Block, ReportContent } from "@/domain/report";
-import type { ReportVersion } from "@/domain/schema";
-import {
-  KIND_LABEL,
-  SECTION_TITLES,
-  STRENGTH_LABEL,
-} from "@/domain/report-presentation";
+import type {
+  ReportVersion,
+  Supplement,
+  SupplementSnapshot,
+} from "@/domain/schema";
+import { SECTION_TITLES, STRENGTH_LABEL } from "@/domain/report-presentation";
 import { Citations, ClaimText, KindTag } from "./report-citations";
+import { AskSection } from "./report-actions";
+import { SupplementCard } from "./supplement-card";
+import { AskedSummary } from "./question-list";
 
 export function SupplementNotes({
   report,
@@ -21,13 +24,10 @@ export function SupplementNotes({
   return notes.length ? (
     <ul className="jd-supplements">
       {notes.map((item) => (
-        <li key={item.supplementId}>
-          <span className="jd-supplement-meta">
-            第 {item.addedInVersion} 版加入 · {KIND_LABEL[item.answerKind]}
-          </span>
-          <strong>{item.question}</strong>
-          <p>{item.answer}</p>
-        </li>
+        <SupplementCard
+          key={`${item.supplementId}-${item.answer}`}
+          item={item}
+        />
       ))}
     </ul>
   ) : null;
@@ -37,6 +37,7 @@ export function Focus({ report }: { report: ReportVersion }) {
     <section className="jd-first" aria-label="面试重点速览">
       <h2 className="jd-block-title">
         面试重点速览 <small>1 岗位速览</small>
+        <AskSection blockId={report.content.focus.gist.id} title="岗位速览" />
       </h2>
       <p className="jd-gist" data-block-id={report.content.focus.gist.id}>
         <ClaimText item={report.content.focus.gist} />
@@ -222,7 +223,7 @@ export function ReportBody({ report }: { report: ReportVersion }) {
           ))}
           {report.content.header.missing.map((item) => (
             <span className="jd-fact jd-missing" key={item}>
-              {item}：原文未写
+              {item}：未显示
             </span>
           ))}
         </div>
@@ -246,6 +247,10 @@ export function ReportBody({ report }: { report: ReportVersion }) {
           <h2 className="jd-block-title">
             <span className="jd-section-no">{index + 2}</span>
             {SECTION_TITLES[section.key]}
+            <AskSection
+              blockId={section.blocks[0]?.blockId}
+              title={SECTION_TITLES[section.key]}
+            />
           </h2>
           {section.status === "not_in_source" ? (
             <p className="jd-not-in-source">原文未体现</p>
@@ -264,7 +269,13 @@ export function confirmQuestions(content: ReportContent) {
       ?.blocks.filter((block) => block.type === "question") ?? []
   );
 }
-export function Brief({ report }: { report: ReportVersion }) {
+export function Brief({
+  report,
+  questions = report.supplements,
+}: {
+  report: ReportVersion;
+  questions?: (Supplement | SupplementSnapshot)[];
+}) {
   return (
     <article className="jd-brief-paper">
       <span className="jd-paper-tag">面试前，翻这一页</span>
@@ -287,6 +298,7 @@ export function Brief({ report }: { report: ReportVersion }) {
           <ClaimText item={report.content.focus.gist} />
         </p>
       </section>
+      <AskedSummary items={questions} />
       <section className="jd-brief-section">
         <h2>可以反问</h2>
         {confirmQuestions(report.content).length ? (
