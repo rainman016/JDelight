@@ -28,9 +28,18 @@ function owningBlock(node: Node): Element | null {
   );
 }
 
+/** 不改动原 DOM；忽略显式标记的界面文字，正文空白和原词保持不变。 */
+export function getAnchorText(root: Element | DocumentFragment): string {
+  const copy = root.cloneNode(true) as Element | DocumentFragment;
+  copy
+    .querySelectorAll("[data-anchor-ignore]")
+    .forEach((node) => node.remove());
+  return copy.textContent ?? "";
+}
+
 /**
- * 文本契约：块以 data-block-id 标识，只含文字和行内元素；纯文本直接取
- * blockElement.textContent，不用 innerText、不折叠空白、不插入虚拟换行。
+ * 文本契约：块以 data-block-id 标识，data-anchor-ignore 标记界面文字。
+ * 创建、偏移与恢复使用同一正文投影，不折叠空白、不插入虚拟换行。
  * start/end 是 UTF-16 半开区间；选择边界向外对齐完整字素，避免拆开 emoji。
  * prefix/suffix 各取最多 32 个 Unicode 码点，保持代理对完整。
  */
@@ -48,12 +57,12 @@ export function createAnchor(
   }
   if (range.collapsed) throw new Error("请选择非空文字");
 
-  const text = blockElement.textContent ?? "";
+  const text = getAnchorText(blockElement);
   const offset = (node: Node, index: number) => {
     const prefix = blockElement.ownerDocument.createRange();
     prefix.selectNodeContents(blockElement);
     prefix.setEnd(node, index);
-    return prefix.cloneContents().textContent?.length ?? 0;
+    return getAnchorText(prefix.cloneContents()).length;
   };
   let start = offset(range.startContainer, range.startOffset);
   let end = offset(range.endContainer, range.endOffset);

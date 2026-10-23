@@ -82,7 +82,9 @@ function ReportBlock({
         <div className="jd-capability">
           <h3>
             {block.name}{" "}
-            <small>重要程度：{block.importance === "high" ? "高" : "中"}</small>
+            <small data-anchor-ignore="">
+              重要程度：{block.importance === "high" ? "高" : "中"}
+            </small>
           </h3>
           {block.meaning.map((item) => (
             <p className="jd-para" key={item.id}>
@@ -101,7 +103,10 @@ function ReportBlock({
       return (
         <div className="jd-question">
           <h3>{block.question}</h3>
-          <p>为什么要问：{block.why}</p>
+          <p>
+            <span data-anchor-ignore="">为什么要问：</span>
+            {block.why}
+          </p>
           <Citations items={block.citations} />
         </div>
       );
@@ -157,7 +162,7 @@ function SectionBlocks({
                         <strong>“{block.phrase}”</strong>
                         <Citations items={block.citations} />
                       </td>
-                      <td data-label={labels[1]}>
+                      <td data-label={labels[1]} data-anchor-ignore="">
                         {STRENGTH_LABEL[block.strength]}
                         {block.degree && (
                           <span className="jd-table-degree">

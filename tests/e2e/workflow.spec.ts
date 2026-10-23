@@ -503,6 +503,91 @@ for (const kind of ["重复句子", "跨行", "反向"] as const)
     expect(data.supplements[0].anchor.blockId).toBe(seeded.blockId);
   });
 
+for (const mode of ["选区", "整节"] as const)
+  test(`正文锚点：${mode}排除类型与出处，刷新重开后可加入原位`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await create(page);
+    const initial = await readData(page);
+    const paragraph = initial.reportVersions[0].content.sections[0].blocks[0];
+    if (paragraph.type !== "paragraph") throw new Error("需要混排正文夹具");
+    const expected = paragraph.claims.map((claim) => `${claim.text} `).join("");
+    const block = page.locator(
+      `.detail-screen [data-block-id="${paragraph.blockId}"]`,
+    );
+    await block.scrollIntoViewIfNeeded();
+    expect(await block.locator(".kind").count()).toBeGreaterThan(0);
+    expect(await block.locator(".cite").count()).toBeGreaterThan(0);
+    const raw = await block.textContent();
+    expect(raw!.length).toBeGreaterThan(expected.length);
+    if (mode === "选区") {
+      await block.evaluate((element) => {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        const selected = getSelection()!;
+        selected.removeAllRanges();
+        selected.addRange(range);
+        element.dispatchEvent(new MouseEvent("mouseup", { bubbles: true }));
+      });
+      await page.getByRole("button", { name: "问一问", exact: true }).click();
+    } else {
+      await page.getByRole("button", { name: /问这一节.*岗位定位/ }).click();
+    }
+    const dock = page.getByRole("dialog", { name: "问一问", exact: true });
+    const excerpt = dock.locator(".jd-dock-selected");
+    expect(await excerpt.textContent()).toBe(`你选中的${expected}`);
+    await dock
+      .getByRole("textbox", { name: "想问什么" })
+      .fill(`${mode}只摘录正文`);
+    await dock.getByRole("button", { name: "获取示例解答" }).click();
+    await expect(dock).toContainText("示例解答 · 通常");
+    if (mode === "选区") await snapshot(page, "fix1-question");
+    await dock.getByRole("button", { name: "关闭问答卡", exact: true }).click();
+    await page.reload();
+    await page.getByRole("button", { name: "查看解答", exact: true }).click();
+    await expect(dock).toBeVisible();
+    expect(await excerpt.textContent()).toBe(`你选中的${expected}`);
+    await dock.getByRole("button", { name: "加入报告", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /报告第 2 版/ }),
+    ).toBeVisible();
+    await page.reload();
+    const note = page.locator(".detail-screen [data-supplement-id]");
+    await expect(note).toContainText(`${mode}只摘录正文`);
+    expect(await note.locator(".jd-note-selection").textContent()).toBe(
+      `你选中的：${expected}`,
+    );
+    expect(
+      await note.evaluate((element) =>
+        element.parentElement?.previousElementSibling?.getAttribute(
+          "data-block-id",
+        ),
+      ),
+    ).toBe(paragraph.blockId);
+    const data = await readData(page);
+    expect(data.supplements[0].anchor).toMatchObject({
+      blockId: paragraph.blockId,
+      start: 0,
+      end: expected.length,
+      exact: expected,
+      prefix: "",
+      suffix: "",
+    });
+    if (mode === "选区") {
+      await note.scrollIntoViewIfNeeded();
+      await snapshot(page, "fix1-supplement");
+      await writeFile(
+        ".cache/evidence/wo003-fix1-anchor.json",
+        JSON.stringify(
+          { raw, body: expected, anchor: data.supplements[0].anchor },
+          null,
+          2,
+        ),
+      );
+    }
+  });
+
 test("模拟解答失败：问题已保存，先记下后刷新仍在，重试可加入报告", async ({
   page,
 }) => {

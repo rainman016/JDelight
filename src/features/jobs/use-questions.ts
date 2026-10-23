@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { createAnchor, resolveAnchor } from "@/lib/anchor";
+import { createAnchor, getAnchorText, resolveAnchor } from "@/lib/anchor";
 import type { ReportVersion, Supplement } from "@/domain/schema";
 import type { SupplementChange } from "@/data/supplements";
 import { repository } from "@/data/repository";
@@ -114,7 +114,7 @@ export function useQuestions({
     );
     if (
       !block ||
-      resolveAnchor(block.textContent ?? "", note.anchor).status === "lost"
+      resolveAnchor(getAnchorText(block), note.anchor).status === "lost"
     ) {
       onNotice("所选文字暂时找不到，问题仍在；重新选择文字后再问。");
       return;
@@ -128,7 +128,7 @@ export function useQuestions({
     );
     if (
       !block ||
-      resolveAnchor(block.textContent ?? "", note.anchor).status === "lost"
+      resolveAnchor(getAnchorText(block), note.anchor).status === "lost"
     )
       throw new Error("所选文字暂时找不到，问题与解答仍保留，重新选择后再问。");
     await changeNote(note.id, { kind: "add" });

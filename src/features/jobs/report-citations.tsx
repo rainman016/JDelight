@@ -34,7 +34,9 @@ export function CitationProvider({
 }
 export function KindTag({ kind }: { kind: Claim["kind"] }) {
   return kind === "source" ? null : (
-    <span className={`kind kind-${kind}`}>{KIND_LABEL[kind]}</span>
+    <span className={`kind kind-${kind}`} data-anchor-ignore="">
+      {KIND_LABEL[kind]}
+    </span>
   );
 }
 export function Citations({ items }: { items: Citation[] }) {
@@ -42,7 +44,7 @@ export function Citations({ items }: { items: Citation[] }) {
   const owner = useId();
   if (!context) throw new Error("出处缺少原文上下文");
   return (
-    <span className="jd-cites">
+    <span className="jd-cites" data-anchor-ignore="">
       {items.map((citation, index) => {
         const line = context.source.lines.find(
           (item) => item.lineNo === citation.lineNo,
