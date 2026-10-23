@@ -45,21 +45,6 @@ export const jobSchema = z.strictObject({
   lastViewedAt: iso,
 });
 export type Job = z.infer<typeof jobSchema>;
-export const reportVersionSchema = z.strictObject({
-  id,
-  jobId: id,
-  sourceVersionId: id,
-  no: z.number().int().positive(),
-  parentId: id.nullable(),
-  content: reportContentSchema,
-  change: z.strictObject({
-    kind: z.enum(["base", "add", "edit", "withdraw"]),
-    supplementId: id.optional(),
-    summary: z.string(),
-  }),
-  createdAt: iso,
-});
-export type ReportVersion = z.infer<typeof reportVersionSchema>;
 export const anchorSchema = z.strictObject({
   blockId: id,
   start: z.number().int().nonnegative(),
@@ -71,6 +56,31 @@ export const anchorSchema = z.strictObject({
   sourceVersionId: id,
   offsetUnit: z.literal("utf16"),
 });
+export const supplementSnapshotSchema = z.strictObject({
+  supplementId: id,
+  question: z.string(),
+  answer: z.string(),
+  answerKind: kindSchema,
+  anchor: anchorSchema,
+  addedInVersion: z.number().int().positive(),
+});
+export type SupplementSnapshot = z.infer<typeof supplementSnapshotSchema>;
+export const reportVersionSchema = z.strictObject({
+  id,
+  jobId: id,
+  sourceVersionId: id,
+  no: z.number().int().positive(),
+  parentId: id.nullable(),
+  content: reportContentSchema,
+  supplements: z.array(supplementSnapshotSchema),
+  change: z.strictObject({
+    kind: z.enum(["base", "add", "edit", "withdraw"]),
+    supplementId: id.optional(),
+    summary: z.string(),
+  }),
+  createdAt: iso,
+});
+export type ReportVersion = z.infer<typeof reportVersionSchema>;
 export const supplementSchema = z.strictObject({
   id,
   jobId: id,

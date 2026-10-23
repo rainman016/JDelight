@@ -187,9 +187,11 @@ test("截断 JD 两条警示；未到 40 字和超限可恢复；连点不创建
   await snapshot(page, "truncated-confirm");
   await page.getByRole("button", { name: "确认原文，开始分析" }).dblclick();
   await expect(page).toHaveURL(/\/jobs\//);
-  await expect(page.locator(".gist-text")).toContainText(
-    "示例分析：真实内容由分析生成",
-  );
+  await expect(
+    page
+      .getByRole("region", { name: "面试重点速览", exact: true })
+      .locator(".jd-gist"),
+  ).toContainText("示例分析：真实内容由分析生成");
   const count = await page.evaluate(async () => {
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const open = indexedDB.open("jdelight");

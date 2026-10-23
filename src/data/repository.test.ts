@@ -30,6 +30,7 @@ test("历史报告读取只校验结构，保存前仍检查 V1–V7", () =>
       no: 1,
       parentId: null,
       content,
+      supplements: [],
       change: { kind: "base", summary: "历史基础分析" },
       createdAt: new Date().toISOString(),
     });

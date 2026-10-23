@@ -109,7 +109,13 @@ export function createRepository(db: JDelightDatabase) {
         const storedReport = report
           ? reportVersionSchema.parse(report)
           : undefined;
-        return { job, source, report: storedReport };
+        const versions = (
+          await db.reportVersions.where("jobId").equals(id).sortBy("no")
+        ).map((version) => reportVersionSchema.parse(version));
+        const sources = (
+          await db.sourceVersions.where("jobId").equals(id).toArray()
+        ).map((version) => sourceVersionSchema.parse(version));
+        return { job, source, report: storedReport, versions, sources };
       },
     );
   return {
@@ -170,7 +176,7 @@ export function createRepository(db: JDelightDatabase) {
             JSON.stringify(stored.lines) !== JSON.stringify(source.lines)
           )
             throw new Error("原文与本机版本不一致，未保存报告");
-          // WO-002 仅创建 base；后续版本操作由 WO-004 增加。
+          // 基础分析仅创建一次；补充产生的新版本由独立事务处理。
           if (expectedParentId !== null)
             throw new Error("基础分析已经存在，不重复创建");
           const report = reportVersionSchema.parse({
@@ -180,6 +186,7 @@ export function createRepository(db: JDelightDatabase) {
             no: 1,
             parentId: null,
             content,
+            supplements: [],
             change: { kind: "base", summary: "基础分析" },
             createdAt: new Date().toISOString(),
           });
