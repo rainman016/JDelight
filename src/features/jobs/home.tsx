@@ -13,6 +13,7 @@ import {
 } from "@/domain/schema";
 import { MarkMenu } from "@/components/mark-menu";
 import { LocalNote } from "@/components/local-note";
+import { DataModal, type BackupStatus } from "@/features/backup/data-modal";
 import "@/styles/home.css";
 const Intro = dynamic(() => import("@/components/intro/Intro"), { ssr: false });
 type Row = { job: Job; report?: ReportVersion };
@@ -30,6 +31,8 @@ export default function Home() {
   const [toast, setToast] = useState("");
   const [filter, setFilter] = useState<Mark | "all">("all");
   const [piled, setPiled] = useState(true);
+  const [dataOpen, setDataOpen] = useState(false),
+    [backupStatus, setBackupStatus] = useState<BackupStatus | null>(null);
   const reduced = useReducedMotion();
   const newHref =
     new URLSearchParams(window.location.search).get("demo") === "fail"
@@ -41,7 +44,14 @@ export default function Home() {
       error: () =>
         setError("本机数据没有读取成功，可以刷新再试。已存的数据没有被删除。"),
     });
-    return () => sub.unsubscribe();
+    const backup = liveQuery(() => repository().backupStatus()).subscribe({
+      next: setBackupStatus,
+      error: () => setError("备份状态没有读取成功，可以刷新后再试。"),
+    });
+    return () => {
+      sub.unsubscribe();
+      backup.unsubscribe();
+    };
   }, []);
   useEffect(() => {
     if (!toast) return;
@@ -74,11 +84,30 @@ export default function Home() {
         <span className="wordmark">JDelight</span>
         <span className="spacer" />
         <LocalNote />
+        <button type="button" className="btn" onClick={() => setDataOpen(true)}>
+          数据与备份
+        </button>
         <Link className="btn primary" href={newHref}>
           贴一份新的 JD
         </Link>
       </header>
       <main className="home-main">
+        {backupStatus?.dirty && (
+          <p className="jd-backup-reminder">
+            <span>
+              {backupStatus.lastExportAt
+                ? "上次备份后有新的改动，建议再导出一次。"
+                : "还没有备份过。清理浏览器会让这些岗位消失。"}
+            </span>
+            <button
+              type="button"
+              className="btn"
+              onClick={() => setDataOpen(true)}
+            >
+              现在导出一份
+            </button>
+          </p>
+        )}
         <section className="home-head">
           <h1 className="home-title">我的岗位</h1>
           <p className="home-sub">
@@ -186,6 +215,13 @@ export default function Home() {
           数据只保存在这台设备的这个浏览器里。清理浏览器数据会让岗位消失。
         </p>
       </main>
+      {dataOpen && (
+        <DataModal
+          status={backupStatus}
+          onClose={() => setDataOpen(false)}
+          onToast={setToast}
+        />
+      )}
       <div className="toast" role="status" data-on={!!toast}>
         {toast}
       </div>
@@ -317,7 +353,7 @@ function JobCard({
       <footer className="job-foot">
         <span className={`ver${ready ? "" : " pending"}`}>
           {report
-            ? `报告第 ${report.no} 版 · ${report.content.origin === "model" ? "真实分析" : "示例分析"}`
+            ? `报告第 ${report.no} 版 · ${report.content.origin === "model" ? "真实分析" : "示例分析"}${report.supplements.length ? ` · ${report.supplements.length} 条补充` : ""}`
             : "待分析"}
         </span>
         <time className="seen" dateTime={job.lastViewedAt}>

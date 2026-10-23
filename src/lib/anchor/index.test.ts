@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, test } from "vitest";
-import { createAnchor, resolveAnchor, type TextAnchor } from "./index";
+import {
+  createAnchor,
+  getAnchorText,
+  resolveAnchor,
+  type TextAnchor,
+} from "./index";
 
 afterEach(() => {
   window.getSelection()?.removeAllRanges();
@@ -37,7 +42,7 @@ describe("createAnchor：UTF-16、块边界与原始文本", () => {
     const element = block("数据分析；数据分析。");
     const anchor = select(element, 5, 9);
     expect(anchor.exact).toBe("数据分析");
-    expect(resolveAnchor(element.textContent!, anchor)).toEqual({
+    expect(resolveAnchor(getAnchorText(element), anchor)).toEqual({
       start: 5,
       end: 9,
       status: "exact",
@@ -127,6 +132,65 @@ describe("createAnchor：UTF-16、块边界与原始文本", () => {
     expect(() => createAnchor(element, range)).toThrow("非空");
     element.removeAttribute("data-block-id");
     expect(() => createAnchor(element, range)).toThrow("data-block-id");
+  });
+
+  test("跨类型标签与出处按钮，只保留正文并按正文计算上下文", () => {
+    const element = block(
+      "<span>前文</span><span data-anchor-ignore><b>推断</b></span>" +
+        "<strong>通常先核实。</strong><span data-anchor-ignore><button>职责第 1 条</button></span>" +
+        "<em>再准备案例。</em><span data-anchor-ignore>说明</span><span>后文</span>",
+    );
+    const range = document.createRange();
+    range.setStart(element, 1);
+    range.setEnd(element, 6);
+    expect(createAnchor(element, range)).toEqual({
+      blockId: "block-a",
+      start: 2,
+      end: 14,
+      exact: "通常先核实。再准备案例。",
+      prefix: "前文",
+      suffix: "后文",
+    });
+    expect(element.querySelector("button")).toHaveTextContent("职责第 1 条");
+  });
+
+  test("选区两端落在界面文字内部时仍只计算夹住的正文", () => {
+    const element = block(
+      "前文<span data-anchor-ignore>推断</span>正文通常<button data-anchor-ignore>职责第 1 条</button>后文",
+    );
+    const range = document.createRange();
+    range.setStart(element.querySelector("span")!.firstChild!, 1);
+    range.setEnd(element.querySelector("button")!.firstChild!, 3);
+    expect(createAnchor(element, range)).toMatchObject({
+      start: 2,
+      end: 6,
+      exact: "正文通常",
+      prefix: "前文",
+      suffix: "后文",
+    });
+  });
+
+  test("只选中界面标签不生成问题锚点", () => {
+    const element = block("正文<span data-anchor-ignore>推断</span>后文");
+    const range = document.createRange();
+    range.selectNodeContents(element.querySelector("span")!);
+    expect(() => createAnchor(element, range)).toThrow("非空文字");
+  });
+
+  test("整节摘录与恢复共用正文投影，标签改名不影响位置", () => {
+    const element = block(
+      "<span data-anchor-ignore>通常</span>正文里通常二字要保留。<button data-anchor-ignore>职责第 1 条</button>",
+    );
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const anchor = createAnchor(element, range);
+    expect(anchor.exact).toBe("正文里通常二字要保留。");
+    element.querySelector("button")!.textContent = "原文第 100 行";
+    expect(resolveAnchor(getAnchorText(element), anchor)).toEqual({
+      start: 0,
+      end: anchor.exact.length,
+      status: "exact",
+    });
   });
 });
 

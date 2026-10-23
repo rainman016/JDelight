@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import "./globals.css";
 import "@/styles/app.css";
+import "@/styles/detail.css";
+import "@/styles/workflow.css";
 
 export const metadata: Metadata = {
   title: "JDelight",

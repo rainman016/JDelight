@@ -10,6 +10,9 @@ import {
 import { sourceLines, type JobMeta } from "@/domain/source";
 import { validateReport } from "@/domain/report";
 import { getDatabase, type JDelightDatabase } from "./database";
+import { createSupplementRepository } from "./supplements";
+import { createBackupRepository } from "./backup";
+import { markDataChanged } from "./revision";
 
 export function createRepository(db: JDelightDatabase) {
   const createJob = async (
@@ -41,25 +44,32 @@ export function createRepository(db: JDelightDatabase) {
       updatedAt: now,
       lastViewedAt: now,
     });
-    return db.transaction("rw", db.jobs, db.sourceVersions, async () => {
-      const existing = await db.jobs.get(requestId);
-      if (existing) {
-        const saved = await db.sourceVersions.get(
-          existing.currentSourceVersionId,
-        );
-        if (
-          saved?.text !== text ||
-          existing.title !== meta.title ||
-          existing.company !== meta.company ||
-          existing.place !== meta.place
-        )
-          throw new Error("已确认的原文不可改写，可以另贴一份 JD");
-        return existing;
-      }
-      await db.jobs.add(job);
-      await db.sourceVersions.add(source);
-      return job;
-    });
+    return db.transaction(
+      "rw",
+      db.jobs,
+      db.sourceVersions,
+      db.meta,
+      async () => {
+        const existing = await db.jobs.get(requestId);
+        if (existing) {
+          const saved = await db.sourceVersions.get(
+            existing.currentSourceVersionId,
+          );
+          if (
+            saved?.text !== text ||
+            existing.title !== meta.title ||
+            existing.company !== meta.company ||
+            existing.place !== meta.place
+          )
+            throw new Error("已确认的原文不可改写，可以另贴一份 JD");
+          return existing;
+        }
+        await db.jobs.add(job);
+        await db.sourceVersions.add(source);
+        await markDataChanged(db);
+        return job;
+      },
+    );
   };
   const patchJob = (
     id: string,
@@ -67,7 +77,7 @@ export function createRepository(db: JDelightDatabase) {
       Pick<Job, "mark" | "note" | "lastViewedAt" | "status" | "lastError">
     >,
   ) =>
-    db.transaction("rw", db.jobs, async () => {
+    db.transaction("rw", db.jobs, db.meta, async () => {
       const job = await db.jobs.get(id);
       if (!job) throw new Error("没找到这个岗位");
       const next = jobSchema.parse({
@@ -76,6 +86,8 @@ export function createRepository(db: JDelightDatabase) {
         updatedAt: new Date().toISOString(),
       });
       await db.jobs.put(next);
+      if (Object.keys(patch).some((key) => key !== "lastViewedAt"))
+        await markDataChanged(db);
       return next;
     });
   const patchAnalysis = (
@@ -83,7 +95,7 @@ export function createRepository(db: JDelightDatabase) {
     status: "saved" | "analyzing" | "failed",
     lastError: Job["lastError"] = null,
   ) =>
-    db.transaction("rw", db.jobs, async () => {
+    db.transaction("rw", db.jobs, db.meta, async () => {
       const current = await db.jobs.get(id);
       if (!current) throw new Error("没找到这个岗位");
       // 另一个页面可能已经提交成功；迟到的开始、取消或失败都不能降级 ready。
@@ -96,6 +108,7 @@ export function createRepository(db: JDelightDatabase) {
       db.jobs,
       db.sourceVersions,
       db.reportVersions,
+      db.supplements,
       async () => {
         const job = await db.jobs.get(id);
         if (!job) return null;
@@ -109,10 +122,29 @@ export function createRepository(db: JDelightDatabase) {
         const storedReport = report
           ? reportVersionSchema.parse(report)
           : undefined;
-        return { job, source, report: storedReport };
+        const versions = (
+          await db.reportVersions.where("jobId").equals(id).sortBy("no")
+        ).map((version) => reportVersionSchema.parse(version));
+        const sources = (
+          await db.sourceVersions.where("jobId").equals(id).toArray()
+        ).map((version) => sourceVersionSchema.parse(version));
+        const supplements = await db.supplements
+          .where("jobId")
+          .equals(id)
+          .sortBy("createdAt");
+        return {
+          job,
+          source,
+          report: storedReport,
+          versions,
+          sources,
+          supplements,
+        };
       },
     );
   return {
+    ...createSupplementRepository(db),
+    ...createBackupRepository(db),
     createJob,
     readJob,
     listJobs: () =>
@@ -153,6 +185,7 @@ export function createRepository(db: JDelightDatabase) {
         db.jobs,
         db.sourceVersions,
         db.reportVersions,
+        db.meta,
         async () => {
           const job = await db.jobs.get(jobId);
           if (!job) throw new Error("没找到这个岗位");
@@ -170,7 +203,7 @@ export function createRepository(db: JDelightDatabase) {
             JSON.stringify(stored.lines) !== JSON.stringify(source.lines)
           )
             throw new Error("原文与本机版本不一致，未保存报告");
-          // WO-002 仅创建 base；后续版本操作由 WO-004 增加。
+          // 基础分析仅创建一次；补充产生的新版本由独立事务处理。
           if (expectedParentId !== null)
             throw new Error("基础分析已经存在，不重复创建");
           const report = reportVersionSchema.parse({
@@ -180,6 +213,7 @@ export function createRepository(db: JDelightDatabase) {
             no: 1,
             parentId: null,
             content,
+            supplements: [],
             change: { kind: "base", summary: "基础分析" },
             createdAt: new Date().toISOString(),
           });
@@ -190,6 +224,7 @@ export function createRepository(db: JDelightDatabase) {
             lastError: null,
             updatedAt: report.createdAt,
           });
+          await markDataChanged(db);
           return report;
         },
       );
@@ -201,11 +236,13 @@ export function createRepository(db: JDelightDatabase) {
         db.sourceVersions,
         db.reportVersions,
         db.supplements,
+        db.meta,
         async () => {
           await db.sourceVersions.where("jobId").equals(id).delete();
           await db.reportVersions.where("jobId").equals(id).delete();
           await db.supplements.where("jobId").equals(id).delete();
           await db.jobs.delete(id);
+          await markDataChanged(db);
         },
       ),
   };
