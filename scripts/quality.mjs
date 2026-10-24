@@ -33,9 +33,13 @@ export async function runQuality(values, service = createAnalysisService()) {
   );
   const rejectedAttempts = [];
   for (const attempt of result.attempts) {
+    const rejected = {
+      attempt: attempt.attempt,
+      reasons: attempt.reasons ?? [],
+    };
     if (attempt.omittedReason) {
       rejectedAttempts.push({
-        attempt: attempt.attempt,
+        ...rejected,
         omittedReason: attempt.omittedReason,
       });
     } else if (attempt.rejected) {
@@ -48,8 +52,8 @@ export async function runQuality(values, service = createAnalysisService()) {
           ? JSON.stringify(attempt.rejected.content, null, 2)
           : attempt.rejected.content,
       );
-      rejectedAttempts.push({ attempt: attempt.attempt, file });
-    }
+      rejectedAttempts.push({ ...rejected, file });
+    } else if (attempt.reasons) rejectedAttempts.push(rejected);
   }
   await writeFile(
     path.join(run, "validation.json"),
@@ -59,6 +63,10 @@ export async function runQuality(values, service = createAnalysisService()) {
           ? { ok: true, checks: "V1–V7 通过" }
           : result.response),
         rejectedAttempts,
+        clearedDegrees: result.attempts.reduce(
+          (sum, attempt) => sum + (attempt.clearedDegrees ?? 0),
+          0,
+        ),
       },
       null,
       2,
@@ -71,6 +79,8 @@ export async function runQuality(values, service = createAnalysisService()) {
         receipts: result.receipts.map((row, index) => ({
           ...row,
           finishReason: result.attempts[index]?.finishReason ?? null,
+          repaired: result.attempts[index]?.repaired ?? false,
+          clearedDegrees: result.attempts[index]?.clearedDegrees ?? 0,
         })),
         totalEstimatedCostCny: result.receipts.reduce(
           (sum, row) => sum + row.estimatedCostCny,

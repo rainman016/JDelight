@@ -23,6 +23,7 @@ import {
   estimateCost,
 } from "./server/pricing";
 import { sourceLines } from "./domain/source";
+import { modelReportSchema } from "./domain/model-report";
 import { scanClient } from "../scripts/scan-client.mjs";
 import { setupEnvironment } from "../scripts/setup-env.mjs";
 import { runQuality } from "../scripts/quality.mjs";
@@ -115,7 +116,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
     const body = JSON.parse(init!.body as string);
     expect(body.model).toBe("deepseek-flash");
     expect(body.thinking).toEqual({ type: "disabled" });
-    expect(body.messages[0].content).toContain("prompt-2");
+    expect(body.messages[0].content).toContain("prompt-3");
     expect(body.max_tokens).toBe(12000);
     expect(body.messages[1].content).toContain("lineNo");
     return reply();
@@ -125,7 +126,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
   expect(result.response.ok).toBe(true);
   if (result.response.ok) {
     expect(result.response.content.origin).toBe("model");
-    expect(result.response.content.ruleVersion).toBe("prompt-2");
+    expect(result.response.content.ruleVersion).toBe("prompt-3");
     expect(result.response.content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
   }
   expect(result.receipts[0].estimatedCostCny).toBe(estimateCost(1000, 500));
@@ -158,10 +159,12 @@ test.each(["wrong-quote", "bad-json", "bad-envelope", "echo-secret"])(
     expect(JSON.stringify(result.response)).toMatch(/[\u4e00-\u9fff]/);
   },
 );
-test("prompt-2：包含全部限长与条件拆分规则，重试仍携带上次原因", () => {
+test("prompt-3：包含全部限长、条件拆分和程度词原文规则，重试仍携带上次原因", () => {
   const system = buildMessages(input())[0].content;
   for (const rule of [
-    "提示词版本：prompt-2",
+    "提示词版本：prompt-3",
+    "requirement.degree 只填该条 citations[].quote 中出现的程度词原文",
+    '原文没有程度词就填空字符串 ""，不得自拟概括',
     "整体简洁，不重复原文",
     "focus.gist.text ≤ 60 字",
     "每条重点 text ≤ 60 字、basis ≤ 80 字",
@@ -208,12 +211,12 @@ async function qualityFiles(
   );
   return { ...result, validation, usage, send };
 }
-test("质量脚本：截断原文分次留存，usage 记录 length，无 finish_reason 时为 null", async () => {
-  const truncated = '{"header":{"shown":[';
+test("质量脚本：不可修复原文分次留存并记录原因，usage 记录 length，无 finish_reason 时为 null", async () => {
+  const truncated = '{"a":2,3}';
   const { run, result, validation, usage, send } = await qualityFiles(
     truncated,
     "length",
-    "not JSON",
+    '{"a" "b" "c"}',
     null,
   );
   expect(result.response.ok).toBe(false);
@@ -223,13 +226,21 @@ test("质量脚本：截断原文分次留存，usage 记录 length，无 finish
   ).toBe(truncated);
   expect(
     await readFile(path.join(run, "attempt-2-rejected-output.txt"), "utf8"),
-  ).toBe("not JSON");
+  ).toBe('{"a" "b" "c"}');
   expect(
     usage.receipts.map((row: { finishReason: unknown }) => row.finishReason),
   ).toEqual(["length", null]);
   expect(validation.rejectedAttempts).toEqual([
-    { attempt: 1, file: "attempt-1-rejected-output.txt" },
-    { attempt: 2, file: "attempt-2-rejected-output.txt" },
+    {
+      attempt: 1,
+      file: "attempt-1-rejected-output.txt",
+      reasons: ["格式无法解析"],
+    },
+    {
+      attempt: 2,
+      file: "attempt-2-rejected-output.txt",
+      reasons: ["格式无法解析"],
+    },
   ]);
   const missing = await qualityFiles("not JSON");
   expect(missing.usage.receipts[0].finishReason).toBeNull();
@@ -252,7 +263,7 @@ test("质量脚本：校验失败留存程序补齐后的报告，每次尝试�
     expect(content).toMatchObject({
       schemaVersion: "report-1",
       origin: "model",
-      ruleVersion: "prompt-2",
+      ruleVersion: "prompt-3",
     });
     expect(content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
     expect(content.sections[0].blocks[0].blockId).toMatch(/^[\da-f-]{36}$/);
@@ -267,22 +278,213 @@ test("质量脚本：校验失败留存程序补齐后的报告，每次尝试�
   const retry = await qualityFiles(output, "stop", JSON.stringify(modelBody()));
   expect(retry.validation.ok).toBe(true);
   expect(retry.validation.rejectedAttempts).toHaveLength(1);
+  expect(retry.validation.rejectedAttempts[0].reasons).toEqual([
+    "V2 第 6 行的引用和原文对不上",
+  ]);
   expect(await readdir(retry.run)).toEqual(
     expect.arrayContaining(["attempt-1-rejected-report.json", "report.json"]),
   );
 });
-test("质量脚本：合法 JSON 但结构错误仍保留解析内容", async () => {
-  const { run } = await qualityFiles('{"missing":"sections"}', "stop");
+test("质量脚本：合法 JSON 但结构错误仍保留解析内容并记录 V1 中文原因", async () => {
+  const { run, validation } = await qualityFiles(
+    '{"missing":"sections"}',
+    "stop",
+  );
+  expect(validation.rejectedAttempts[0].reasons).toContain(
+    "V1 报告结构不完整或字段不合法，没有展示",
+  );
   expect(
     JSON.parse(
       await readFile(path.join(run, "attempt-1-rejected-report.json"), "utf8"),
     ),
   ).toEqual({ missing: "sections" });
 });
-test.each(["原样", "JSON 转义"])(
+test.each(["熟悉", "未分级", ""])(
+  "degree=%s：只保留任一引用里的原文，清空不触发重试并记录条数",
+  async (degree) => {
+    const body = modelReportSchema.parse(modelBody());
+    const section = body.sections.find((row) => row.key === "thresholds")!;
+    const requirement = section.blocks.find(
+      (block) => block.type === "requirement",
+    )!;
+    if (requirement.type !== "requirement") throw new Error("缺少要求夹具");
+    section.blocks = [requirement];
+    requirement.phrase = "熟悉大模型基本原理";
+    requirement.citations = [
+      { lineNo: 12, quote: "本科及以上学历" },
+      { lineNo: 13, quote: "熟悉大模型基本原理" },
+    ];
+    requirement.degree = degree;
+    const cleared = degree === "未分级" ? 1 : 0;
+    const { result, validation, usage, send } = await qualityFiles(
+      JSON.stringify(body),
+    );
+    expect(send).toHaveBeenCalledTimes(1);
+    expect(result.response.ok).toBe(true);
+    if (result.response.ok) {
+      const actual = result.response.content.sections[1].blocks[0];
+      expect(actual).toMatchObject({
+        type: "requirement",
+        degree: cleared ? "" : degree,
+      });
+    }
+    expect(validation.clearedDegrees).toBe(cleared);
+    expect(validation.rejectedAttempts).toEqual([]);
+    expect(usage.receipts[0]).toMatchObject({
+      clearedDegrees: cleared,
+      repaired: false,
+    });
+  },
+);
+
+test("缺逗号的报告本地修复后通过全部校验，仅发一次假请求并记录 repaired", async () => {
+  const output = JSON.stringify(modelBody()).replace(',"focus":', '"focus":');
+  expect(() => JSON.parse(output)).toThrow();
+  const { result, usage, validation, send } = await qualityFiles(
+    output,
+    "stop",
+  );
+  expect(result.response.ok).toBe(true);
+  expect(send).toHaveBeenCalledTimes(1);
+  expect(result.receipts).toHaveLength(1);
+  expect(result.attempts[0].repaired).toBe(true);
+  expect(usage.receipts[0]).toMatchObject({ repaired: true, result: "ok" });
+  expect(validation.rejectedAttempts).toEqual([]);
+});
+
+test("截断缺章节修复后仍因 V1 重试；保留当遍原因和修复标记", async () => {
+  const body = modelReportSchema.parse(modelBody());
+  const output = JSON.stringify(body).slice(0, -2);
+  const { result, validation, usage, send } = await qualityFiles(
+    output.slice(0, output.indexOf(',{"key":"toConfirm"')),
+    "length",
+    JSON.stringify(modelBody()),
+    "stop",
+  );
+  expect(result.response.ok).toBe(true);
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(
+    usage.receipts.map((row: { repaired: boolean }) => row.repaired),
+  ).toEqual([true, false]);
+  expect(validation.rejectedAttempts).toEqual([
+    {
+      attempt: 1,
+      file: "attempt-1-rejected-report.json",
+      reasons: ["V1 报告结构不完整或字段不合法，没有展示"],
+    },
+  ]);
+});
+
+test("完全不可修复的 JSON 按现有逻辑重试，第一遍原因不被成功覆盖", async () => {
+  const { result, validation, usage, send } = await qualityFiles(
+    '{"a":2,3}',
+    "stop",
+    JSON.stringify(modelBody()),
+  );
+  expect(result.response.ok).toBe(true);
+  expect(send).toHaveBeenCalledTimes(2);
+  expect(usage.receipts[0]).toMatchObject({
+    repaired: false,
+    result: "format_failed",
+  });
+  expect(validation.rejectedAttempts[0]).toMatchObject({
+    reasons: ["格式无法解析"],
+  });
+});
+
+test.each(["V2", "V3", "V4", "V5", "V6", "V7"])(
+  "修复 JSON 后仍执行 %s，失败原因留存到对应尝试",
+  async (code) => {
+    const body = modelReportSchema.parse(modelBody());
+    const requirement = body.sections[1].blocks.find(
+      (block) => block.type === "requirement",
+    )!;
+    if (requirement.type !== "requirement") throw new Error("缺少要求夹具");
+    switch (code) {
+      case "V2":
+        body.focus.items[0].citations[0].quote = "虚构但不在原文的句子";
+        break;
+      case "V3":
+        body.focus.gist.citations = [];
+        break;
+      case "V4":
+        requirement.phrase = "B 端或 AI 产品经验";
+        requirement.citations = [
+          { lineNo: 12, quote: "有 B 端或 AI 产品经验者优先" },
+        ];
+        requirement.strength = "required";
+        break;
+      case "V5":
+        body.focus.gist.kind = "common";
+        break;
+      case "V6":
+        requirement.phrase = "原文没有的关键措辞";
+        break;
+      case "V7":
+        Object.assign(body.focus, { score: 90 });
+        break;
+    }
+    const output = JSON.stringify(body).replace(',"focus":', '"focus":');
+    const { result, usage, validation, send } = await qualityFiles(
+      output,
+      "stop",
+      JSON.stringify(modelBody()),
+    );
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(result.response.ok).toBe(true);
+    expect(usage.receipts[0].repaired).toBe(true);
+    expect(validation.rejectedAttempts[0].reasons).toEqual(
+      expect.arrayContaining([expect.stringMatching(new RegExp(`^${code} `))]),
+    );
+  },
+);
+
+test.each(["修复成功", "修复后拒绝"])(
+  "%s：响应体、回执、质量文件和日志均不含假密钥，内部诊断不进入 HTTP",
+  async (mode) => {
+    const body = modelReportSchema.parse(modelBody());
+    if (mode === "修复后拒绝")
+      body.focus.items[0].citations[0].quote = "原文没有这段引用";
+    const output = JSON.stringify(body).replace(',"focus":', '"focus":');
+    const log = vi.spyOn(console, "log").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const quality = await qualityFiles(output, "stop");
+    expect(quality.result.attempts[0].repaired).toBe(true);
+    for (const file of await readdir(quality.run))
+      expect(
+        await readFile(path.join(quality.run, file), "utf8"),
+      ).not.toContain(secret);
+    const { options } = await setup();
+    const response = await createHandlers(
+      createAnalysisService({
+        ...options,
+        fetch: vi.fn<typeof fetch>(async () => reply(output, "stop")),
+      }),
+    ).POST(
+      new Request("http://localhost:3100/api/analysis", {
+        method: "POST",
+        headers: { Host: "localhost:3100", "Content-Type": "application/json" },
+        body: JSON.stringify(input()),
+      }),
+    );
+    const text = await response.text();
+    expect(text).not.toContain(secret);
+    for (const field of ["repaired", "clearedDegrees", "attempts", "rejected"])
+      expect(JSON.parse(text)).not.toHaveProperty(field);
+    const headers = JSON.stringify([...response.headers]);
+    expect(headers).not.toContain(secret);
+    expect(headers).not.toMatch(/repaired|clearedDegrees|finishReason/);
+    expect(log).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    expect(warn).not.toHaveBeenCalled();
+  },
+);
+
+test.each(["原样", "JSON 转义", "修复 JSON 转义"])(
   "质量脚本：输出含%s假密钥时不写失败内容，validation 说明原因",
   async (mode) => {
-    const output =
+    let output =
       mode === "原样"
         ? secret
         : JSON.stringify({ leak: secret }).replace(
@@ -296,6 +498,7 @@ test.each(["原样", "JSON 转义"])(
               )
               .join(""),
           );
+    if (mode === "修复 JSON 转义") output = output.slice(0, -1);
     const { run, result, validation } = await qualityFiles(output, secret);
     expect(JSON.stringify(result)).not.toContain(secret);
     expect(await readdir(run)).toEqual(["usage.json", "validation.json"]);
@@ -624,7 +827,12 @@ test("客户端扫描能检出标记与测试密钥，空目录和缺失目录�
   await mkdir(dir);
   await expect(scanClient(dir)).rejects.toThrow();
   await expect(scanClient(path.join(dir, "missing"))).rejects.toThrow();
-  for (const marker of ["EASYROUTER", secret]) {
+  for (const marker of [
+    "EASYROUTER",
+    secret,
+    "jsonrepair",
+    "JSONRepairError",
+  ]) {
     await writeFile(path.join(dir, "bundle.js"), marker);
     await expect(scanClient(dir)).rejects.toThrow();
   }

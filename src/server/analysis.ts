@@ -1,10 +1,15 @@
 import "server-only";
+import { jsonrepair } from "jsonrepair";
+import { ZodError } from "zod";
 import {
   analysisInputSchema,
   type AnalysisResponse,
   type AnalysisStatus,
 } from "../domain/analysis.ts";
-import { completeModelReport } from "../domain/model-report.ts";
+import {
+  clearUnsupportedDegrees,
+  completeModelReport,
+} from "../domain/model-report.ts";
 import { ReportCheckError, validateReport } from "../domain/report.ts";
 import { sourceLines } from "../domain/source.ts";
 import { readConfig, type ServerConfig } from "./config.ts";
@@ -47,6 +52,9 @@ export interface InternalResult {
 export interface AttemptDiagnostic {
   attempt: number;
   finishReason: string | null;
+  repaired?: boolean;
+  clearedDegrees?: number;
+  reasons?: string[];
   rejected?:
     { format: "json"; content: unknown } | { format: "text"; content: string };
   omittedReason?: string;
@@ -269,7 +277,13 @@ export function createAnalysisService(options: Options = {}) {
                   content: text,
                 };
                 try {
-                  const parsed: unknown = JSON.parse(text);
+                  let parsed: unknown;
+                  try {
+                    parsed = JSON.parse(text);
+                  } catch {
+                    parsed = JSON.parse(jsonrepair(text));
+                    diagnostic.repaired = true;
+                  }
                   if (JSON.stringify(parsed).includes(currentConfig.apiKey)) {
                     diagnostic.omittedReason = "模型输出含密钥，未写入失败内容";
                     throw new FormatFailure();
@@ -281,6 +295,7 @@ export function createAnalysisService(options: Options = {}) {
                     source.id,
                     PROMPT_VERSION,
                   );
+                  diagnostic.clearedDegrees = clearUnsupportedDegrees(content);
                   if (JSON.stringify(content).includes(currentConfig.apiKey)) {
                     diagnostic.omittedReason = "模型输出含密钥，未写入失败内容";
                     throw new FormatFailure();
@@ -292,6 +307,20 @@ export function createAnalysisService(options: Options = {}) {
                 } catch (error) {
                   if (!diagnostic.omittedReason) diagnostic.rejected = rejected;
                   const checked = error instanceof ReportCheckError;
+                  diagnostic.reasons = cleanReasons(
+                    checked
+                      ? error.issues.map(
+                          (issue) => `${issue.code} ${issue.message}`,
+                        )
+                      : error instanceof ZodError
+                        ? error.issues.map((issue) =>
+                            issue.code === "unrecognized_keys"
+                              ? "V7 报告含未允许的字段（包括分数类字段），没有展示"
+                              : "V1 报告结构不完整或字段不合法，没有展示",
+                          )
+                        : ["格式无法解析"],
+                    currentConfig.apiKey,
+                  );
                   outcome = checked ? "check_failed" : "format_failed";
                   retryReasons = cleanReasons(
                     checked
@@ -308,6 +337,7 @@ export function createAnalysisService(options: Options = {}) {
               } catch (error) {
                 if (error instanceof FormatFailure) {
                   outcome = "format_failed";
+                  diagnostic.reasons = ["格式无法解析"];
                   retryReasons = ["模型输出的 JSON 格式或报告结构不符合约定"];
                   response = {
                     ok: false,
@@ -330,6 +360,11 @@ export function createAnalysisService(options: Options = {}) {
                     reasons: ["分析已取消；已经发出的调用仍计次，原文已保留"],
                   };
               }
+              if (!response.ok)
+                diagnostic.reasons ??= cleanReasons(
+                  response.reasons,
+                  currentConfig.apiKey,
+                );
               try {
                 await settle(currentConfig.ledgerPath, ledger, entry, {
                   result: outcome,

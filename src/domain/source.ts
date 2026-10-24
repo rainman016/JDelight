@@ -19,17 +19,39 @@ export const SECTION_LABEL = {
   other: "原文",
 };
 const HEADINGS: [RegExp, SourceSection][] = [
-  [/^(岗位职责|工作职责|工作内容|你将负责)[:：]?$/, "duty"],
-  [/^(任职要求|任职资格|岗位要求|职位要求|我们希望你)[:：]?$/, "must"],
-  [/^(加分项|加分条件|优先条件)[:：]?$/, "bonus"],
+  [
+    /^(岗位职责|工作职责|工作内容|你将负责|职位描述|岗位描述|职责描述|你要做的)/,
+    "duty",
+  ],
+  [
+    /^(任职要求|任职资格|岗位要求|职位要求|我们希望你|职责要求|任职条件|基本要求|你需要具备|核心能力)/,
+    "must",
+  ],
+  [/^(加分项|加分条件|优先条件|优先考虑|加分|nicetohave)/i, "bonus"],
 ];
+function normalizeHeading(text: string): string {
+  const unwrap = (value: string) =>
+    value.replace(/^[\s【\[(（]+|[\s】\])）:：]+$/g, "");
+  return unwrap(
+    unwrap(text).replace(
+      /^(?:[0-9一二三四五六七八九十百]+[\s、.．)）\]:：-]+)\s*/,
+      "",
+    ),
+  )
+    .replace(/\s*[-–—]\s*[A-Za-z].*$/, "")
+    .replace(/[\s:：]/g, "");
+}
 export function classifySourceLine(
   line: SourceLine,
   current: SourceSection,
   counts: Record<SourceSection, number>,
 ): SourceSection {
   const text = line.text.trim();
-  const heading = HEADINGS.find(([re]) => re.test(text));
+  const normalized = normalizeHeading(text);
+  const heading =
+    [...normalized].length <= 24
+      ? HEADINGS.find(([re]) => re.test(normalized))
+      : undefined;
   line.heading = !!heading;
   line.section = heading?.[1] ?? (text ? current : "other");
   if (heading) return heading[1];

@@ -12,8 +12,12 @@ export async function scanClient(root) {
       else if (entry.isFile()) {
         files++;
         const text = await readFile(file, "utf8");
-        if (/EASYROUTER|wo002b-test-secret-never-export/.test(text))
-          throw new Error("客户端构建包含服务端配置标记或测试密钥，扫描未通过");
+        if (
+          /EASYROUTER|wo002b-test-secret-never-export|jsonrepair|JSONRepairError/.test(
+            text,
+          )
+        )
+          throw new Error("客户端构建包含服务端专用代码或配置标记，扫描未通过");
       }
     }
   }
