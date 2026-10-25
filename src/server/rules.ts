@@ -1,5 +1,5 @@
 import "server-only";
-export const PROMPT_VERSION = "prompt-2";
+export const PROMPT_VERSION = "prompt-3";
 export const WRITING_RULES = `你为不熟悉岗位的在校求职者分析一份 JD，只依据确认的原文，用简体中文。
 输出 JSON，严格遵守给定结构；不输出 Markdown 代码块，不输出结构之外的字段、分数或个人匹配度。
 原文事实用 source；从原文措辞得出的判断用 inference；行业常识下的猜测用 speculation；通行做法用 common。
@@ -13,6 +13,7 @@ focus.gist 必须 inference，概括岗位一句核心判断，与正文一致�
 先读职责与要求的对应关系，再判断程度词与动词责任、否定句、重复词、前后矛盾、场景共同点、缺失项。
 保留“或”“等”、了解/熟悉/熟练/精通、参与/负责/独立推动的区别；不把优先、加分升级为必需。
 同一行写了多个条件时，每个条件单独一个 requirement；phrase 取该条件的原文措辞，必须出现在至少一个 citations[].quote 中。
+requirement.degree 只填该条 citations[].quote 中出现的程度词原文（如精通、熟悉、了解、熟练、掌握）；原文没有程度词就填空字符串 ""，不得自拟概括。
 citations[].quote 只引用该条件所在的那一段，不要整行引用。按 ，,；;。！？ 分句；“优先 / 加分 / 者优先”所在分句里的条件只能是 preferred；加分分区的条件也只能 preferred，不能升级为 required。同一行其他分句的必备条件可按原文标 required。
 岗位定位比较通常的工作与本岗位写法；任职门槛逐项读要求；隐含要求从措辞关系得出并引用。
 能力解析用通俗中文串讲技术、通常产出或指标，注明 high/medium，不给分数；场景推测标 speculation，不能臆造招聘方内部信息。

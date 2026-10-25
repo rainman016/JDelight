@@ -74,3 +74,21 @@ export function completeModelReport(
     ruleVersion,
   });
 }
+export function clearUnsupportedDegrees(content: ReportContent): number {
+  let cleared = 0;
+  for (const section of content.sections) {
+    for (const block of section.blocks) {
+      if (
+        block.type === "requirement" &&
+        block.degree !== "" &&
+        !block.citations.some((citation) =>
+          citation.quote.includes(block.degree),
+        )
+      ) {
+        block.degree = "";
+        cleared++;
+      }
+    }
+  }
+  return cleared;
+}
