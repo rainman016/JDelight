@@ -21,6 +21,7 @@ import {
   AnalysisClientError,
 } from "@/providers/model/client";
 import type { AnalysisStatus, AnalysisFailureKind } from "@/domain/analysis";
+import { TrialAccess } from "./trial-access";
 type Failure = { kind: AnalysisFailureKind | "save"; reasons: string[] };
 
 export default function NewJob({
@@ -301,18 +302,28 @@ export default function NewJob({
                   {error}
                 </p>
               )}
-              {status?.available && status.uiRemaining > 0 && (
-                <label className="real-switch">
-                  <input
-                    type="checkbox"
-                    role="switch"
-                    checked={useReal}
-                    onChange={(e) => setUseReal(e.target.checked)}
-                  />
-                  <span>用真实 AI 分析（还剩 {status.uiRemaining} 次）</span>
-                </label>
+              {status?.mode === "trial" && (
+                <TrialAccess
+                  status={status}
+                  checked={useReal}
+                  onChange={setUseReal}
+                  onStatus={setStatus}
+                />
               )}
-              {useReal && (
+              {status?.mode !== "trial" &&
+                status?.available &&
+                status.uiRemaining > 0 && (
+                  <label className="real-switch">
+                    <input
+                      type="checkbox"
+                      role="switch"
+                      checked={useReal}
+                      onChange={(e) => setUseReal(e.target.checked)}
+                    />
+                    <span>用真实 AI 分析（还剩 {status.uiRemaining} 次）</span>
+                  </label>
+                )}
+              {useReal && status?.mode !== "trial" && (
                 <p className="hint">
                   真实分析会计次和费用；取消后，已经发出的调用仍计次。
                 </p>
@@ -602,16 +613,20 @@ function FailureView({
         </span>
         <h1 className="fail-title">
           {quota
-            ? "本机的真实分析次数已用完"
+            ? status?.mode === "trial"
+              ? "这个邀请码暂时不能继续真实分析"
+              : "本机的真实分析次数已用完"
             : fail.kind === "save"
               ? "这次分析没有保存成功"
               : "这次分析没通过检查，没有展示"}
         </h1>
         <p className="fail-lead">
           {quota
-            ? status
-              ? `本机上限 ${status.maxCalls} 次、¥${status.maxCostCny}，已用 ${status.used} 次、约 ¥${status.costUsedCny.toFixed(4)}，不会自动恢复。`
-              : "本机真实分析受次数与金额上限约束，不会自动恢复。"
+            ? status?.mode === "trial"
+              ? "这个邀请码的份数或可用次数受限；现在仍可使用模拟分析。"
+              : status
+                ? `本机上限 ${status.maxCalls} 次、¥${status.maxCostCny}，已用 ${status.used} 次、约 ¥${status.costUsedCny.toFixed(4)}，不会自动恢复。`
+                : "本机真实分析受次数与金额上限约束，不会自动恢复。"
             : "引用必须和原文一字不差，要求的程度不能被改写。"}
         </p>
         <ul className="fail-list">
@@ -631,7 +646,11 @@ function FailureView({
             ) : (
               <button type="button" className="btn primary" onClick={onRetry}>
                 重新分析
-                {useReal && status ? `（还剩 ${status.uiRemaining} 次）` : ""}
+                {useReal && status
+                  ? status.mode === "trial"
+                    ? `（这个码还剩 ${status.codeRemaining} 份）`
+                    : `（还剩 ${status.uiRemaining} 次）`
+                  : ""}
               </button>
             ))}
         </div>

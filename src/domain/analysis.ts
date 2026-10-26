@@ -7,7 +7,8 @@ export const analysisInputSchema = z.strictObject({
   lines: z.array(sourceLineSchema).min(1).max(12001),
 });
 export type AnalysisInput = z.infer<typeof analysisInputSchema>;
-export interface AnalysisStatus {
+export interface LocalAnalysisStatus {
+  mode?: "local";
   available: boolean;
   uiRemaining: number;
   used: number;
@@ -15,6 +16,17 @@ export interface AnalysisStatus {
   costUsedCny: number;
   maxCostCny: number;
 }
+export interface TrialAnalysisStatus {
+  mode: "trial";
+  available: boolean;
+  needCode: boolean;
+  invalidCode: boolean;
+  codeRemaining: number;
+  trialEnded: boolean;
+  callLimitReached: boolean;
+  unavailable: boolean;
+}
+export type AnalysisStatus = LocalAnalysisStatus | TrialAnalysisStatus;
 export type AnalysisFailureKind = "check" | "quota" | "network" | "config";
 export type AnalysisResponse =
   | { ok: true; content: ReportContent }

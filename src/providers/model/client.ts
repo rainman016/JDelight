@@ -10,6 +10,7 @@ import {
   type SourceSection,
 } from "@/domain/source";
 import { reportContentSchema } from "@/domain/report";
+import { inviteHeaders, readInvite } from "./invite";
 export class AnalysisClientError extends Error {
   constructor(
     public readonly kind: "check" | "quota" | "network" | "config",
@@ -19,11 +20,33 @@ export class AnalysisClientError extends Error {
     this.name = "AnalysisClientError";
   }
 }
-export async function analysisStatus(): Promise<AnalysisStatus | null> {
+export async function analysisStatus(
+  code: string | null = readInvite(),
+): Promise<AnalysisStatus | null> {
   try {
-    const response = await fetch("/api/analysis/status", { cache: "no-store" });
+    const response = await fetch("/api/analysis/status", {
+      cache: "no-store",
+      headers: inviteHeaders(code),
+    });
     if (!response.ok) return null;
     const data = (await response.json()) as AnalysisStatus;
+    if (data.mode === "trial") {
+      if (
+        ![
+          data.available,
+          data.needCode,
+          data.invalidCode,
+          data.trialEnded,
+          data.callLimitReached,
+          data.unavailable,
+        ].every((v) => typeof v === "boolean") ||
+        !Number.isInteger(data.codeRemaining) ||
+        data.codeRemaining < 0 ||
+        data.codeRemaining > 15
+      )
+        return null;
+      return data;
+    }
     if (
       typeof data.available !== "boolean" ||
       ![
@@ -82,7 +105,7 @@ export async function analyzeWithModel(
   try {
     response = await fetch("/api/analysis", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...inviteHeaders() },
       body: JSON.stringify(
         analysisInputSchema.parse({ id: source.id, text: source.text, lines }),
       ),
