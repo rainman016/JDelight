@@ -4,7 +4,7 @@ import { ZodError } from "zod";
 import {
   analysisInputSchema,
   type AnalysisResponse,
-  type AnalysisStatus,
+  type LocalAnalysisStatus,
 } from "../domain/analysis.ts";
 import {
   clearUnsupportedDegrees,
@@ -63,6 +63,11 @@ interface Options {
   config?: () => Promise<ServerConfig | null>;
   fetch?: typeof fetch;
   timeoutMs?: number;
+  billing?: {
+    withLedgerLock: typeof withLedgerLock;
+    reserve: typeof reserve;
+    settle: typeof settle;
+  };
 }
 const message = {
   ok: false,
@@ -88,8 +93,9 @@ function receipt(entry: LedgerEntry): Receipt {
 export function createAnalysisService(options: Options = {}) {
   const configured = options.config ?? readConfig;
   const send = options.fetch ?? globalThis.fetch;
+  const billing = options.billing ?? { withLedgerLock, reserve, settle };
   return {
-    async status(): Promise<AnalysisStatus> {
+    async status(): Promise<LocalAnalysisStatus> {
       const base = {
         available: false,
         uiRemaining: 0,
@@ -148,7 +154,7 @@ export function createAnalysisService(options: Options = {}) {
           confirmedAt: new Date().toISOString(),
         };
         const currentConfig = config;
-        return await withLedgerLock(
+        return await billing.withLedgerLock(
           config.ledgerPath,
           async (ledger): Promise<InternalResult> => {
             let retryReasons: string[] = [];
@@ -163,7 +169,7 @@ export function createAnalysisService(options: Options = {}) {
                 : timeout;
               let entry: LedgerEntry;
               try {
-                entry = await reserve(
+                entry = await billing.reserve(
                   currentConfig.ledgerPath,
                   ledger,
                   purpose,
@@ -366,7 +372,7 @@ export function createAnalysisService(options: Options = {}) {
                   currentConfig.apiKey,
                 );
               try {
-                await settle(currentConfig.ledgerPath, ledger, entry, {
+                await billing.settle(currentConfig.ledgerPath, ledger, entry, {
                   result: outcome,
                   inputTokens,
                   outputTokens,

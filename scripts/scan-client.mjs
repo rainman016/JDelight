@@ -1,6 +1,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
+import { createHash } from "node:crypto";
+const inviteTestHash = createHash("sha256").update("ABCDEFGHJK").digest("hex");
 export async function scanClient(root) {
   let files = 0;
   async function walk(dir) {
@@ -13,9 +15,10 @@ export async function scanClient(root) {
         files++;
         const text = await readFile(file, "utf8");
         if (
-          /EASYROUTER|wo002b-test-secret-never-export|jsonrepair|JSONRepairError/.test(
+          /EASYROUTER|wo002b-test-secret-never-export|jsonrepair|JSONRepairError|UPSTASH_REDIS_REST_(URL|TOKEN)|KV_REST_API_(URL|TOKEN)|JDELIGHT_INVITE_HASHES|JDELIGHT_ALLOWED_HOSTS|wo004-test-token-never-export/.test(
             text,
-          )
+          ) ||
+          text.includes(inviteTestHash)
         )
           throw new Error("客户端构建包含服务端专用代码或配置标记，扫描未通过");
       }
