@@ -47,10 +47,10 @@ export function createMemoryTrialStore(
       const p = trialCommandSchema.parse(input);
       const n = counts.get(p.code) ?? { analyses: 0, calls: 0 };
       counts.set(p.code, n);
-      for (const j of jobs.values())
+      for (const [id, j] of jobs)
         if (j.code === p.code && j.status === "pending" && j.expires <= p.now) {
           n.analyses--;
-          j.status = "expired";
+          jobs.delete(id);
         }
       const reply = (kind: TrialReply[0], id = "") =>
         trialReplySchema.parse([kind, cost, n.analyses, n.calls, id]);
@@ -76,11 +76,9 @@ export function createMemoryTrialStore(
       }
       if (!j || j.code !== p.code) return reply("state");
       if (p.op === "finish") {
-        const target = p.success ? "ok" : "failed";
-        if (j.status === target) return reply("ok", p.analysisId);
         if (j.status !== "pending") return reply("state");
         if (!p.success) n.analyses--;
-        j.status = target;
+        jobs.delete(p.analysisId);
         return reply("ok", p.analysisId);
       }
       const r = reservations.get(p.id);

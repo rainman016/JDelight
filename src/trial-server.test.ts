@@ -20,6 +20,7 @@ import {
 import { createHandlers } from "./server/api";
 import { createAnalysisService } from "./server/analysis";
 import { BASE_URL, MODEL_ID, estimateCost } from "./server/pricing";
+import { buildMessages } from "./server/prompt";
 import { sourceLines } from "./domain/source";
 import sample from "../fixtures/sample-jd.json";
 import report from "../fixtures/sample-report.json";
@@ -193,6 +194,69 @@ test("原子预留边界、结算差额、失败退份，金额与调用数不�
     )[1],
   ).toBe(110);
 });
+test("同一码连续 200 次占份后输入超限失败，不累积占份记录或消耗额度", async () => {
+  const memory = createMemoryTrialStore();
+  const run = vi.fn(memory.run),
+    send = vi.fn<typeof fetch>();
+  const service = createTrialService(config, { store: { run }, fetch: send });
+  const text = "能力要求\n".repeat(2000);
+  const source = {
+    id: crypto.randomUUID(),
+    text,
+    lines: sourceLines(text),
+  };
+  expect(() => buildMessages(source)).toThrow(
+    "原文与报告结构超过本次安全输入额度，未发起调用",
+  );
+  for (let i = 0; i < 200; i++) {
+    const result = await service.analyze(source, code);
+    expect(result.response).toMatchObject({
+      ok: false,
+      kind: "config",
+    });
+  }
+  const operations = run.mock.calls.map(([command]) => command.op);
+  expect(operations.filter((op) => op === "claim")).toHaveLength(200);
+  expect(operations.filter((op) => op === "finish")).toHaveLength(200);
+  expect(operations).not.toContain("reserve");
+  expect(send).not.toHaveBeenCalled();
+  expect(memory.inspect().jobs).toEqual([]);
+  expect(memory.inspect().reservations).toEqual([]);
+  expect((await memory.run(trialCommand("status", hash))).slice(1, 4)).toEqual([
+    0, 0, 0,
+  ]);
+});
+
+test.each([true, false])(
+  "finish success=%s 删除记录；重复 finish 返回 state，不改变额度或其他占份",
+  async (success) => {
+    const store = createMemoryTrialStore();
+    const completed = await claim(store),
+      pending = await claim(store);
+    await store.run(trialCommand("reserve", hash, completed));
+    const expectedCounters = [R, success ? 2 : 1, 1];
+    const finished = await store.run(
+      trialCommand("finish", hash, completed, completed, { success }),
+    );
+    expect(finished[0]).toBe("ok");
+    expect(finished.slice(1, 4)).toEqual(expectedCounters);
+    expect(store.inspect().jobs).toEqual([
+      [pending, expect.objectContaining({ code: hash, status: "pending" })],
+    ]);
+    for (const repeatedSuccess of [false, true]) {
+      const repeated = await store.run(
+        trialCommand("finish", hash, completed, completed, {
+          success: repeatedSuccess,
+        }),
+      );
+      expect(repeated[0]).toBe("state");
+      expect(repeated.slice(1, 4)).toEqual(expectedCounters);
+    }
+    expect(store.inspect().jobs).toHaveLength(1);
+    expect(store.inspect().jobs[0][0]).toBe(pending);
+  },
+);
+
 test("第 15 份成功后第 16 次被拒；40 次调用硬上限独立于份数", async () => {
   const store = createMemoryTrialStore();
   for (let i = 0; i < 15; i++) {
@@ -257,6 +321,11 @@ test("假 REST EVAL 使用同一命令契约，鉴权、重定向、超时和四
 });
 test("被杀进程的过期未完成份数可恢复，预留费用与调用数保持，成功份数不重置", async () => {
   const store = createMemoryTrialStore();
+  const completed = await claim(store);
+  await store.run(trialCommand("reserve", hash, completed));
+  await store.run(
+    trialCommand("finish", hash, completed, completed, { success: true }),
+  );
   const j = await claim(store);
   await store.run(trialCommand("reserve", hash, j));
   const expired = await store.run(
@@ -264,10 +333,15 @@ test("被杀进程的过期未完成份数可恢复，预留费用与调用数�
       now: Date.now() + ANALYSIS_LEASE_MS + 1,
     }),
   );
-  expect(expired.slice(1, 4)).toEqual([R, 0, 1]);
-  expect(
-    (await store.run(trialCommand("finish", hash, j, j, { success: true })))[0],
-  ).toBe("state");
+  expect(expired.slice(1, 4)).toEqual([2 * R, 1, 2]);
+  expect(store.inspect().jobs).toEqual([]);
+  for (const success of [false, true]) {
+    const repeated = await store.run(
+      trialCommand("finish", hash, j, j, { success }),
+    );
+    expect(repeated[0]).toBe("state");
+    expect(repeated.slice(1, 4)).toEqual([2 * R, 1, 2]);
+  }
 });
 test("自动重试仅占一份，按两次调用结算，回执无原文、报告或凭据", async () => {
   const store = createMemoryTrialStore();
@@ -336,6 +410,7 @@ test("失败退份；网络超时与取消仍保留最高费用和调用数", as
     expect((await store.run(trialCommand("status", hash))).slice(1, 4)).toEqual(
       [R, 0, 1],
     );
+    expect(store.inspect().jobs).toEqual([]);
   }
 });
 test.each([

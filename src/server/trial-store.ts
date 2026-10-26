@@ -94,7 +94,7 @@ for i=1,#all,2 do
   local j = cjson.decode(all[i+1])
   if j.code == p.code and j.status == 'pending' and j.expires <= p.now then
     if a <= 0 then return redis.error_reply('invalid shares') end
-    a = a - 1; j.status = 'expired'; putjob(all[i],j)
+    a = a - 1; redis.call('HDEL',jobs,all[i])
     redis.call('HSET', s, akey, a)
   end
 end
@@ -112,14 +112,12 @@ if p.op == 'claim' then
 end
 if not j or j.code ~= p.code then return reply('state') end
 if p.op == 'finish' then
-  local target = p.success and 'ok' or 'failed'
-  if j.status == target then return reply('ok',p.analysisId) end
   if j.status ~= 'pending' then return reply('state') end
   if not p.success then
     if a <= 0 then return reply('state') end
     a = a - 1; redis.call('HSET', s, akey, a)
   end
-  j.status = target; putjob(p.analysisId,j); return reply('ok',p.analysisId)
+  redis.call('HDEL',jobs,p.analysisId); return reply('ok',p.analysisId)
 end
 local rraw = redis.call('HGET', calls, p.id)
 local r = rraw and cjson.decode(rraw) or nil
