@@ -33,7 +33,11 @@ const failure = (kind: "config" | "network", reason: string, status = 400) =>
     { ok: false, kind, reasons: [reason] },
     { status, headers: { "Cache-Control": "no-store" } },
   );
-function trialRequest(request: Request, allowed: string[], post: boolean) {
+export function trialRequest(
+  request: Request,
+  allowed: string[],
+  post: boolean,
+) {
   const host = request.headers.get("host")?.toLowerCase() ?? "";
   if (!allowed.includes(host)) return false;
   const origin = request.headers.get("origin");

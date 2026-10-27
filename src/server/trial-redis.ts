@@ -81,7 +81,7 @@ export function createRedisTrialStore(
           reply[0] === "ok" &&
           command.op !== "status" &&
           reply[4] !==
-            (command.op === "claim" || command.op === "finish"
+            (command.op === "claim" || command.op.endsWith("finish")
               ? command.analysisId
               : command.id)
         )

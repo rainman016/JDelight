@@ -81,6 +81,7 @@ export function TrialAccess({
                   saveInvite(code);
                   setEditing(false);
                   onStatus(next);
+                  onChange(next.available && next.codeRemaining > 0);
                 } finally {
                   setBusy(false);
                 }

@@ -14,6 +14,8 @@ import {
 import { MarkMenu } from "@/components/mark-menu";
 import { LocalNote } from "@/components/local-note";
 import { DataModal, type BackupStatus } from "@/features/backup/data-modal";
+import { HomeNotices, FeedbackButton } from "@/features/trial/experience";
+import { downloadBackup } from "@/features/backup/download";
 import "@/styles/home.css";
 const Intro = dynamic(() => import("@/components/intro/Intro"), { ssr: false });
 type Row = { job: Job; report?: ReportVersion };
@@ -92,22 +94,14 @@ export default function Home() {
         </Link>
       </header>
       <main className="home-main">
-        {backupStatus?.dirty && (
-          <p className="jd-backup-reminder">
-            <span>
-              {backupStatus.lastExportAt
-                ? "上次备份后有新的改动，建议再导出一次。"
-                : "还没有备份过。清理浏览器会让这些岗位消失。"}
-            </span>
-            <button
-              type="button"
-              className="btn"
-              onClick={() => setDataOpen(true)}
-            >
-              现在导出一份
-            </button>
-          </p>
-        )}
+        <HomeNotices
+          status={backupStatus}
+          onExport={async () => {
+            await downloadBackup();
+            setToast("备份已导出");
+          }}
+        />
+        <FeedbackButton hidden={dataOpen || !!toast} />
         <section className="home-head">
           <h1 className="home-title">我的岗位</h1>
           <p className="home-sub">
@@ -288,12 +282,8 @@ function JobCard({
         }}
       />
       {piled ? (
-        <button
-          type="button"
-          className="job-open"
-          aria-label={`整理开：${job.title || "未命名岗位"}`}
-          onClick={onSpread}
-        >
+        <button type="button" className="job-open" onClick={onSpread}>
+          <span className="sr-only">整理开：</span>
           <CardContent job={job} report={report} />
         </button>
       ) : (

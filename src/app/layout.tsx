@@ -4,6 +4,8 @@ import "./globals.css";
 import "@/styles/app.css";
 import "@/styles/detail.css";
 import "@/styles/workflow.css";
+import "@/styles/trial-experience.css";
+import { AppExperience } from "@/features/trial/experience";
 
 export const metadata: Metadata = {
   title: "JDelight",
@@ -15,6 +17,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN">
       <body className="bg-paper font-sans text-ink antialiased">
+        <AppExperience />
         {children}
       </body>
     </html>

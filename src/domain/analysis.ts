@@ -24,6 +24,8 @@ export interface TrialAnalysisStatus {
   codeRemaining: number;
   trialEnded: boolean;
   callLimitReached: boolean;
+  questionsRemaining: number;
+  questionCallLimitReached: boolean;
   unavailable: boolean;
 }
 export type AnalysisStatus = LocalAnalysisStatus | TrialAnalysisStatus;

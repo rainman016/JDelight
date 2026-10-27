@@ -20,6 +20,9 @@ export async function downloadBackup() {
     await repository().markExported(
       snapshot.data.exportedAt,
       snapshot.revision,
+      snapshot.data.reportVersions
+        .filter((report) => report.change.kind === "base")
+        .map((report) => report.id),
     );
     return {
       filename,

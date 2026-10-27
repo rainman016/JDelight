@@ -15,6 +15,9 @@ import {
   PER_CODE_MAX_CALLS,
   TRIAL_MAX_COST_MICRO_CNY,
   TRIAL_CALL_RESERVE,
+  QUESTION_CALL_RESERVE,
+  PER_CODE_QUESTIONS,
+  PER_CODE_QUESTION_CALLS,
   requireTrialOk,
   trialStorageError,
   type TrialCommand,
@@ -52,6 +55,8 @@ const unavailableStatus: TrialAnalysisStatus = {
   codeRemaining: 0,
   trialEnded: false,
   callLimitReached: false,
+  questionsRemaining: 0,
+  questionCallLimitReached: false,
   unavailable: false,
 };
 export function unavailableTrialStatus(): TrialAnalysisStatus {
@@ -84,9 +89,8 @@ export function createTrialService(
       if (!hash)
         return { ...unavailableStatus, needCode: !code, invalidCode: !!code };
       try {
-        const [, cost, analyses, calls] = requireTrialOk(
-          await store.run(trialCommand("status", hash)),
-        );
+        const [, cost, analyses, calls, , questions, questionCalls] =
+          requireTrialOk(await store.run(trialCommand("status", hash)));
         const trialEnded = cost + TRIAL_CALL_RESERVE > TRIAL_MAX_COST_MICRO_CNY;
         const codeRemaining = Math.max(
           0,
@@ -102,6 +106,17 @@ export function createTrialService(
           codeRemaining,
           trialEnded,
           callLimitReached: calls >= PER_CODE_MAX_CALLS,
+          questionsRemaining: Math.max(
+            0,
+            Math.min(
+              PER_CODE_QUESTIONS - questions,
+              PER_CODE_QUESTION_CALLS - questionCalls,
+              Math.floor(
+                (TRIAL_MAX_COST_MICRO_CNY - cost) / QUESTION_CALL_RESERVE,
+              ),
+            ),
+          ),
+          questionCallLimitReached: questionCalls >= PER_CODE_QUESTION_CALLS,
         };
       } catch {
         return { ...unavailableStatus, unavailable: true };
