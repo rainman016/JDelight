@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "cross-env NEXT_TELEMETRY_DISABLED=1 next dev",
     "build": "cross-env NEXT_TELEMETRY_DISABLED=1 next build",
+    "build:test": "cross-env NEXT_PUBLIC_JDELIGHT_FEEDBACK_URL=https://feedback.example.invalid/form npm run build",
     "start": "cross-env NEXT_TELEMETRY_DISABLED=1 next start",
     "typecheck": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"next typegen && tsc --noEmit\"",
     "lint": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"eslint . --max-warnings 0 && npm run format:check\"",
@@ -19,7 +20,7 @@
     "test": "cross-env NEXT_TELEMETRY_DISABLED=1 vitest run",
     "test:install": "cross-env NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright install chromium",
     "test:e2e": "cross-env NEXT_TELEMETRY_DISABLED=1 PLAYWRIGHT_BROWSERS_PATH=.cache/ms-playwright playwright test",
-    "check": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"npm run typecheck && npm run lint && npm run test && npm run build && npm run scan:client && npm run test:e2e\"",
+    "check": "cross-env-shell NEXT_TELEMETRY_DISABLED=1 \"npm run typecheck && npm run lint && npm run test && npm run build:test && npm run scan:client && npm run test:e2e\"",
     "quality": "node --experimental-transform-types --conditions=react-server --env-file-if-exists=.env.local scripts/quality.mjs",
     "scan:client": "node scripts/scan-client.mjs",
     "setup:env": "node --conditions=react-server scripts/setup-env.mjs",

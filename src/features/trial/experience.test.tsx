@@ -191,6 +191,16 @@ test.each([
   render(<FeedbackButton url={url ?? ""} />);
   expect(screen.queryByRole("link", { name: "提意见" })).toBeNull();
 });
+test("未配置反馈环境变量且不传 URL 时不显示按钮", () => {
+  vi.stubEnv("NEXT_PUBLIC_JDELIGHT_FEEDBACK_URL", undefined);
+  try {
+    render(<FeedbackButton />);
+    expect(screen.queryByRole("link", { name: "提意见" })).toBeNull();
+  } finally {
+    vi.unstubAllEnvs();
+  }
+});
+
 test("合法反馈按钮在新窗口打开，有防跨窗访问属性；浮层打开时可隐藏", () => {
   const { rerender } = render(
     <FeedbackButton url="https://feedback.test/form" />,
