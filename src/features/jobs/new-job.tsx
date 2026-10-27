@@ -49,7 +49,17 @@ export default function NewJob({
   useEffect(() => {
     let mounted = true;
     void analysisStatus().then((value) => {
-      if (mounted) setStatus(value);
+      if (mounted) {
+        setStatus(value);
+        if (
+          value?.mode === "trial" &&
+          value.available &&
+          !value.needCode &&
+          !value.invalidCode &&
+          value.codeRemaining > 0
+        )
+          setUseReal(true);
+      }
     });
     return () => {
       mounted = false;

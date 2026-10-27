@@ -259,7 +259,7 @@ test("四种便利贴、叠放整理、筛选计数，备注 Esc 放弃与清空
   }
   await page.goto("/");
   await expect(page.locator(".cards.piled")).toBeVisible();
-  await page.getByRole("button", { name: "整理开：虚构岗位 4" }).click();
+  await page.getByRole("button", { name: /^整理开：\s*虚构岗位 4/ }).click();
   await expect(page.locator(".cards.spread")).toBeVisible();
   const colors = await page
     .locator("article.job")

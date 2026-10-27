@@ -1,0 +1,92 @@
+.jd-trial-notice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 24px;
+  padding: 8px 12px 8px 16px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  background: var(--mint-2);
+  font-size: 14px;
+  line-height: 1.8;
+}
+.jd-trial-notice p {
+  margin: 0;
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+.jd-trial-notice .btn {
+  white-space: nowrap;
+}
+.jd-notice-close {
+  grid-column: -2 / -1;
+  min-height: 44px;
+  width: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 24px;
+  cursor: pointer;
+}
+.jd-notice-close:hover {
+  color: var(--green);
+  background: var(--sheet);
+  border-radius: 6px;
+}
+.jd-device-notice {
+  padding: 8px 24px 0;
+}
+.jd-device-notice .jd-trial-notice {
+  margin: 0;
+}
+.jd-feedback {
+  position: fixed;
+  z-index: 30;
+  right: 24px;
+  bottom: 24px;
+  min-height: 44px;
+  background: var(--sheet);
+  box-shadow: var(--shadow);
+}
+body:has(dialog[open], .jd-question-dock, .jd-source-sheet) .jd-feedback {
+  display: none;
+}
+.jd-question-quota,
+.jd-dock-reference {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 899px) {
+  .jd-trial-notice {
+    grid-template-columns: minmax(0, 1fr) 44px;
+    gap: 8px;
+    padding: 8px 8px 8px 12px;
+  }
+  .jd-trial-notice .btn {
+    grid-column: 1;
+    justify-self: start;
+  }
+  .jd-notice-close {
+    grid-column: 2;
+    grid-row: 1;
+    align-self: start;
+  }
+  .jd-device-notice {
+    padding: 8px 12px 0;
+  }
+  .jd-feedback {
+    right: 16px;
+    bottom: 16px;
+  }
+}
+@media print {
+  .jd-device-notice,
+  .jd-trial-notice,
+  .jd-feedback {
+    display: none !important;
+  }
+}

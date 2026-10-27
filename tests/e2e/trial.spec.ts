@@ -16,6 +16,8 @@ const status = {
   codeRemaining: 0,
   trialEnded: false,
   callLimitReached: false,
+  questionsRemaining: 0,
+  questionCallLimitReached: false,
   unavailable: false,
 };
 async function tabTo(page: Page, name: string) {
@@ -103,19 +105,19 @@ for (const width of [1440, 390])
       name: "用真实 AI 分析（这个码还剩 15 份）",
     });
     await expect(toggle).toBeVisible();
-    await expect(toggle).not.toBeChecked();
+    await expect(toggle).toBeChecked();
     expect(
       await page.evaluate(() => localStorage.getItem("jdelight:invite")),
     ).toBe(code);
     await shot(page, `${width}-B`);
     await toggle.focus();
     await page.keyboard.press("Space");
-    await expect(toggle).toBeChecked();
+    await expect(toggle).not.toBeChecked();
     await page.getByRole("button", { name: "更换邀请码", exact: true }).click();
     await expect(input).toBeVisible();
     await input.fill("abcde-fghjk");
     await page.keyboard.press("Enter");
-    await expect(toggle).not.toBeChecked();
+    await expect(toggle).toBeChecked();
     state = "C";
     await page.reload();
     await page.getByRole("button", { name: "试试示例" }).click();

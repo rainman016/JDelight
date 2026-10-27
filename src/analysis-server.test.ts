@@ -667,7 +667,7 @@ test("请求超时/取消仍计次，保留原文；补记失败保留 pending �
     const result = await createAnalysisService({
       ...options,
       fetch: send,
-      timeoutMs: 10,
+      timeoutMs: cancel ? 45_000 : 10,
     }).analyze(input(), "smoke", ctrl.signal);
     expect(result.response).toMatchObject({ ok: false, kind: "network" });
     expect((await readLedger(file)).entries).toHaveLength(1);

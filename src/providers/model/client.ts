@@ -39,10 +39,14 @@ export async function analysisStatus(
           data.trialEnded,
           data.callLimitReached,
           data.unavailable,
+          data.questionCallLimitReached,
         ].every((v) => typeof v === "boolean") ||
         !Number.isInteger(data.codeRemaining) ||
         data.codeRemaining < 0 ||
-        data.codeRemaining > 15
+        data.codeRemaining > 15 ||
+        !Number.isInteger(data.questionsRemaining) ||
+        data.questionsRemaining < 0 ||
+        data.questionsRemaining > 20
       )
         return null;
       return data;

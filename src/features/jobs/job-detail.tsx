@@ -16,6 +16,7 @@ import { useCitation } from "./use-citation";
 import { useQuestions } from "./use-questions";
 import { ReportActions } from "./report-actions";
 import { QuestionDock } from "./question-dock";
+import { FeedbackButton } from "@/features/trial/experience";
 import { QuestionList } from "./question-list";
 
 type Data = Awaited<ReturnType<ReturnType<typeof repository>["readJob"]>>;
@@ -103,6 +104,9 @@ export default function JobDetail({ id }: { id: string }) {
   };
   return (
     <div className="job-detail">
+      <FeedbackButton
+        hidden={!!questions.target || mobileOpen || exporting || !!notice}
+      />
       <div className="detail-screen">
         <header className="topbar">
           <Link href="/" className="back">
@@ -362,6 +366,7 @@ export default function JobDetail({ id }: { id: string }) {
           key={questions.target.initial?.id ?? questions.target.anchor.exact}
           jobId={id}
           target={questions.target}
+          source={source?.text ?? ""}
           onClose={questions.close}
           onAdd={questions.addNote}
         />

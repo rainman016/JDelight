@@ -40,21 +40,59 @@ export function createBackupRepository(db: JDelightDatabase) {
           const revision = await dataRevision(db),
             exported = (await db.meta.get("exportedRevision"))?.value;
           const jobs = await db.jobs.count();
+          const reports = await db.reportVersions
+            .filter((report) => report.change.kind === "base")
+            .toArray();
+          let exportedIds: string[] | null = null;
+          try {
+            const stored = (await db.meta.get("exportedBaseReportIds"))?.value;
+            if (stored) {
+              const parsed: unknown = JSON.parse(stored);
+              if (
+                Array.isArray(parsed) &&
+                parsed.every((id) => typeof id === "string")
+              )
+                exportedIds = parsed;
+            }
+          } catch {
+            /* 历史导出记录仍可按时间判断 */
+          }
+          const exportedSet = exportedIds ? new Set(exportedIds) : null;
           return {
             jobs,
             versions: await db.reportVersions.count(),
             notes: await db.supplements.count(),
             lastExportAt,
             dirty: lastExportAt ? revision !== exported : jobs > 0,
+            newReports: reports.filter((report) =>
+              exportedSet
+                ? !exportedSet.has(report.id)
+                : !lastExportAt || report.createdAt > lastExportAt,
+            ).length,
+            firstReportAt:
+              reports.map((report) => report.createdAt).sort()[0] ?? null,
           };
         },
       ),
-    markExported: (exportedAt: string, revision: string) =>
+    markExported: (
+      exportedAt: string,
+      revision: string,
+      baseReportIds?: string[],
+    ) =>
       db.transaction("rw", db.meta, async () => {
+        if (!baseReportIds) await db.meta.delete("exportedBaseReportIds");
         // 记导出快照的修订号，下载期间又有写入时仍提示未备份。
         await db.meta.bulkPut([
           { key: "lastExportAt", value: exportedAt },
           { key: "exportedRevision", value: revision },
+          ...(baseReportIds
+            ? [
+                {
+                  key: "exportedBaseReportIds",
+                  value: JSON.stringify(baseReportIds),
+                },
+              ]
+            : []),
         ]);
       }),
     previewImport: async (input: unknown) => {

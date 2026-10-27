@@ -370,6 +370,7 @@ test("自动重试仅占一份，按两次调用结算，回执无原文、报�
       "outputTokens",
       "estimatedCostMicro",
       "elapsedMs",
+      "type",
     ].sort(),
   );
   for (const value of [sample, config.apiKey, config.redisToken, hash])
@@ -482,6 +483,8 @@ test("状态只显示本码剩余份数和必要标记，无金额、其他码�
       "trialEnded",
       "callLimitReached",
       "unavailable",
+      "questionsRemaining",
+      "questionCallLimitReached",
     ].sort(),
   );
   for (const value of [

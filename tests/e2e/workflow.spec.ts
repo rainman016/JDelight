@@ -298,9 +298,9 @@ for (const width of [1440, 390])
     ).toContainText("怎样解释这段岗位定位？");
     await snapshot(page, `${width}-asked-brief`);
     await activate(page, page.getByRole("link", { name: "← 我的岗位" }));
-    await expect(page.locator(".jd-backup-reminder")).toContainText(
-      "还没有备份过",
-    );
+    await expect(
+      page.getByRole("complementary", { name: "备份提醒" }),
+    ).toHaveCount(0);
     await activate(
       page,
       page.getByRole("button", { name: "数据与备份", exact: true }),
@@ -334,7 +334,9 @@ for (const width of [1440, 390])
       page,
       page.getByRole("button", { name: "好的", exact: true }),
     );
-    await expect(page.locator(".jd-backup-reminder")).toHaveCount(0);
+    await expect(
+      page.getByRole("complementary", { name: "备份提醒" }),
+    ).toHaveCount(0);
     await activate(
       page,
       page.getByRole("button", { name: "+ 备注", exact: true }),
@@ -343,9 +345,9 @@ for (const width of [1440, 390])
       .getByRole("textbox", { name: "备注", exact: true })
       .fill("导出后的新备注");
     await page.keyboard.press("Enter");
-    await expect(page.locator(".jd-backup-reminder")).toContainText(
-      "上次备份后有新的改动",
-    );
+    await expect(
+      page.getByRole("complementary", { name: "备份提醒" }),
+    ).toHaveCount(0);
     await activate(
       page,
       page.getByRole("button", { name: "数据与备份", exact: true }),
@@ -674,7 +676,7 @@ test("替换导入：先导出现有两份数据，再确认替换成文件里�
     "supplements",
   ] as const)
     expect(restored[key]).toEqual(original[key]);
-  await expect(page.locator(".jd-backup-reminder")).toContainText(
-    "上次备份后有新的改动",
-  );
+  await expect(
+    page.getByRole("complementary", { name: "备份提醒" }),
+  ).toHaveCount(0);
 });
