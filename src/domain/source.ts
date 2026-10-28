@@ -89,7 +89,10 @@ export function metaFrom(text: string): JobMeta {
     place: pick(/^(?:地点|工作地点)[:：][ \t]*(.+)$/m) || inlinePlace,
   };
 }
-export function checksOf(lines: SourceLine[]) {
+export function hasSourceEllipsis(text: string): boolean {
+  return /…|\.{3}/.test(text);
+}
+export function checksOf(lines: SourceLine[], meta?: JobMeta) {
   const found = new Set(lines.filter((l) => l.heading).map((l) => l.section));
   const notes: { level: "warn" | "ok"; text: string; lineNo?: number }[] = [];
   if (!found.has("duty"))
@@ -102,6 +105,33 @@ export function checksOf(lines: SourceLine[]) {
       level: "warn",
       text: "没找到“任职要求”分区。分析会把要求当作“原文未写明”。",
     });
+  for (const line of lines) {
+    const text = line.text.trim();
+    const identityField = /^(?:岗位名称|公司)[:：]/.test(text);
+    const middleEllipsis = [...text.matchAll(/…+|\.{3,}/g)].some(
+      (match) =>
+        text.slice(0, match.index).trim() &&
+        text.slice(match.index + match[0].length).trim(),
+    );
+    if ((identityField && hasSourceEllipsis(text)) || middleEllipsis)
+      notes.push({
+        level: "warn",
+        text: `第 ${line.lineNo} 行有省略号，原文可能不完整；分析不会补全。`,
+        lineNo: line.lineNo,
+      });
+  }
+  if (meta) {
+    const original = metaFrom(lines.map((line) => line.text).join("\n"));
+    for (const [key, label] of [
+      ["title", "岗位名称"],
+      ["company", "公司"],
+    ] as const)
+      if (hasSourceEllipsis(meta[key]) && meta[key] !== original[key])
+        notes.push({
+          level: "warn",
+          text: `${label}有省略号，原文可能不完整；分析不会补全。`,
+        });
+  }
   const last = [...lines].reverse().find((l) => l.text.trim());
   if (last && /(?:…|\.\.\.|，|,|、|和|及)$/.test(last.text.trim()))
     notes.push({

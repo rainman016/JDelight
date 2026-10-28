@@ -16,7 +16,7 @@ const source: SourceVersion = {
   lines: sourceLines(SAMPLE_JD),
   confirmedAt: "2026-10-21T00:00:00.000Z",
 };
-test("完整示例与其他 JD 的占位报告都通过 V1–V7", () => {
+test("完整示例与其他 JD 的占位报告都通过 V1–V10", () => {
   expect(validateReport(reportFor(source), source).sections).toHaveLength(7);
   const padded = {
     ...source,

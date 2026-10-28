@@ -1,6 +1,6 @@
 import type { Block, Claim, Citation } from "./report";
 import type { Job, ReportVersion, SourceVersion } from "./schema";
-import { citationLabel } from "./source";
+import { citationLabel, hasSourceEllipsis } from "./source";
 
 export const KIND_LABEL = {
   source: "原文",
@@ -30,6 +30,10 @@ export function reportDate(value: string) {
     month: "long",
     day: "numeric",
   }).format(new Date(value));
+}
+
+export function hasIncompleteJobMeta(job: Pick<Job, "title" | "company">) {
+  return hasSourceEllipsis(job.title) || hasSourceEllipsis(job.company);
 }
 
 /** 只使用所选版本的完整快照，不读取当前补充表、标记或备注。 */
@@ -83,6 +87,7 @@ export function reportText(
     "JDelight · 岗位报告",
     job.title || "未命名岗位",
     `${job.company || "未显示"} · ${job.place || "未显示"}`,
+    ...(hasIncompleteJobMeta(job) ? ["原文不完整"] : []),
     `报告第 ${report.no} 版 · ${reportDate(report.createdAt)} · ${report.content.origin === "model" ? "真实分析" : "示例分析"}`,
     "只依据你确认的原文；推断、推测和通常做法都不是招聘方说过的话。",
     "原文写明的条件",

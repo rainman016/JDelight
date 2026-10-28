@@ -3,7 +3,11 @@ import { expect, test } from "vitest";
 import { JDelightDatabase } from "../data/database";
 import { withIsolatedDatabase } from "../../tests/helpers/database-isolation";
 import { detailFixture } from "../../tests/helpers/detail-fixture";
-import { reportText, SECTION_TITLES } from "./report-presentation";
+import {
+  hasIncompleteJobMeta,
+  reportText,
+  SECTION_TITLES,
+} from "./report-presentation";
 
 test("导出使用所选版本快照，含全章、程度、出处、边界，不混入当前补充与私有备注", async () => {
   await withIsolatedDatabase(async (scope) => {
@@ -31,5 +35,39 @@ test("导出使用所选版本快照，含全章、程度、出处、边界，�
     expect(old).not.toContain("preparing");
     expect(old).toContain("推测");
     expect(old).toContain("通常");
+  });
+});
+
+test.each([
+  ["虚构产品…专员", "纸舟测试科技", true],
+  ["虚构产品专员", "纸舟...科技", true],
+  ["虚构产品专员", "纸舟测试科技", false],
+])("确认字段 %s / %s 的完整性标记", (title, company, incomplete) => {
+  expect(hasIncompleteJobMeta({ title, company })).toBe(incomplete);
+});
+
+test("导出页头使用用户确认字段，原样保留省略号并提示原文不完整", async () => {
+  await withIsolatedDatabase(async (scope) => {
+    const fixture = await detailFixture(
+      scope.track(new JDelightDatabase(scope.name)),
+    );
+    const job = {
+      ...fixture.job,
+      title: "虚构产品…专员",
+      company: "测试纸舟...科技",
+      place: "测试地点",
+    };
+    const heading = reportText(job, fixture.first, fixture.source)
+      .split("\n\n")
+      .slice(0, 4);
+    expect(heading).toEqual([
+      "JDelight · 岗位报告",
+      job.title,
+      `${job.company} · ${job.place}`,
+      "原文不完整",
+    ]);
+    expect(
+      reportText(fixture.job, fixture.first, fixture.source),
+    ).not.toContain("原文不完整");
   });
 });

@@ -1,5 +1,10 @@
 import { z } from "zod";
 import type { SourceVersion } from "./schema";
+import {
+  hasUnconfirmedReplacement,
+  headerFollowsSource,
+  unsupportedConditions,
+} from "./report-fidelity.ts";
 
 const id = z.string().min(1);
 export const citationSchema = z.strictObject({
@@ -115,7 +120,7 @@ export type Block = z.infer<typeof blockSchema>;
 export type Section = z.infer<typeof sectionSchema>;
 export type ReportContent = z.infer<typeof reportContentSchema>;
 export interface ReportIssue {
-  code: `V${1 | 2 | 3 | 4 | 5 | 6 | 7}`;
+  code: `V${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10}`;
   message: string;
 }
 export class ReportCheckError extends Error {
@@ -158,13 +163,27 @@ export function validateReport(
         add("V2", `第 ${ref.lineNo} 行的引用和原文对不上`);
     }
   };
+  const checkConditions = (text: string, refs: Citation[]) => {
+    for (const fragment of unsupportedConditions(text, refs))
+      add("V8", `条件“${fragment}”与引用原文不一致，没有展示`);
+  };
+  const checkReplacement = (text: string) => {
+    if (hasUnconfirmedReplacement(text))
+      add("V10", "报告断言可以替代岗位要求，需向招聘方确认，没有展示");
+  };
   const claim = (c: Claim) => {
     unique(c.id);
     checkCitations(c.citations, c.kind === "source" || c.kind === "inference");
+    if (c.kind === "source") checkConditions(c.text, c.citations);
+    checkReplacement(c.text);
   };
   report.header.shown.forEach((c) => {
     unique(c.id);
     checkCitations(c.citations, true);
+    checkConditions(c.text, c.citations);
+    if (!headerFollowsSource(c.text, c.citations, source.lines))
+      add("V9", "报告头的条件补全或改写了引用原文，没有展示");
+    checkReplacement(c.text);
   });
   claim(report.focus.gist);
   if (report.focus.gist.kind !== "inference")
@@ -172,6 +191,8 @@ export function validateReport(
   report.focus.items.forEach((c) => {
     unique(c.id);
     checkCitations(c.citations, true);
+    checkReplacement(c.text);
+    checkReplacement(c.basis);
   });
   report.sections.forEach((section, i) => {
     if (section.key !== SECTION_KEYS[i])

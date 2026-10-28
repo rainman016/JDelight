@@ -116,7 +116,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
     const body = JSON.parse(init!.body as string);
     expect(body.model).toBe("deepseek-flash");
     expect(body.thinking).toEqual({ type: "disabled" });
-    expect(body.messages[0].content).toContain("prompt-3");
+    expect(body.messages[0].content).toContain("prompt-4");
     expect(body.max_tokens).toBe(12000);
     expect(body.messages[1].content).toContain("lineNo");
     return reply();
@@ -126,7 +126,7 @@ test("有效输出补齐程序编号和来源；先记 pending 再请求；用�
   expect(result.response.ok).toBe(true);
   if (result.response.ok) {
     expect(result.response.content.origin).toBe("model");
-    expect(result.response.content.ruleVersion).toBe("prompt-3");
+    expect(result.response.content.ruleVersion).toBe("prompt-4");
     expect(result.response.content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
   }
   expect(result.receipts[0].estimatedCostCny).toBe(estimateCost(1000, 500));
@@ -159,10 +159,16 @@ test.each(["wrong-quote", "bad-json", "bad-envelope", "echo-secret"])(
     expect(JSON.stringify(result.response)).toMatch(/[\u4e00-\u9fff]/);
   },
 );
-test("prompt-3：包含全部限长、条件拆分和程度词原文规则，重试仍携带上次原因", () => {
+test("prompt-4：保留限长与程度词规则，明确原文忠实性和替代结论边界", () => {
   const system = buildMessages(input())[0].content;
   for (const rule of [
-    "提示词版本：prompt-3",
+    "提示词版本：prompt-4",
+    "不得断言招聘方会接受或认可替代",
+    "用课程项目、竞赛等证明相关能力",
+    "需向招聘方确认是否认可的待确认问题",
+    "产品经理…gent方向",
+    "3个月起，面向本科在校生",
+    "不得添加或改写限定词",
     "requirement.degree 只填该条 citations[].quote 中出现的程度词原文",
     '原文没有程度词就填空字符串 ""，不得自拟概括',
     "整体简洁，不重复原文",
@@ -263,7 +269,7 @@ test("质量脚本：校验失败留存程序补齐后的报告，每次尝试�
     expect(content).toMatchObject({
       schemaVersion: "report-1",
       origin: "model",
-      ruleVersion: "prompt-3",
+      ruleVersion: "prompt-4",
     });
     expect(content.focus.gist.id).toMatch(/^[\da-f-]{36}$/);
     expect(content.sections[0].blocks[0].blockId).toMatch(/^[\da-f-]{36}$/);
@@ -285,6 +291,52 @@ test("质量脚本：校验失败留存程序补齐后的报告，每次尝试�
     expect.arrayContaining(["attempt-1-rejected-report.json", "report.json"]),
   );
 });
+test.each(["V8", "V9", "V10"])(
+  "%s：新校验进入失败留存和现有一次重试，用户原因不显示内部编号",
+  async (code) => {
+    const body = modelReportSchema.parse(modelBody());
+    if (code === "V8") body.header.shown[2].text = "试用期 3 个月起";
+    else if (code === "V9")
+      body.header.shown[0].text = "本科及以上学历（全日制）";
+    else {
+      const paragraph = body.sections[0].blocks[0];
+      if (paragraph.type !== "paragraph") throw new Error("缺少虚构段落夹具");
+      paragraph.claims[0].text = "课程项目可替代岗位经验。";
+    }
+    const output = JSON.stringify(body);
+    const failed = await qualityFiles(output, "stop");
+    expect(failed.send).toHaveBeenCalledTimes(2);
+    expect(failed.result.response).toMatchObject({ ok: false, kind: "check" });
+    expect(failed.validation.rejectedAttempts).toHaveLength(2);
+    for (const attempt of failed.validation.rejectedAttempts)
+      expect(attempt.reasons).toEqual(
+        expect.arrayContaining([
+          expect.stringMatching(new RegExp(`^${code} `)),
+        ]),
+      );
+    if (failed.result.response.ok) throw new Error("应拒绝不合格报告");
+    expect(failed.result.response.reasons.join("；")).not.toMatch(
+      /V(?:8|9|10)/,
+    );
+    expect(await readdir(failed.run)).not.toContain("report.json");
+
+    const retried = await qualityFiles(
+      output,
+      "stop",
+      JSON.stringify(modelBody()),
+    );
+    expect(retried.result.response.ok).toBe(true);
+    expect(retried.send).toHaveBeenCalledTimes(2);
+    expect(retried.validation.rejectedAttempts).toHaveLength(1);
+    const retryRequest = JSON.parse(
+      retried.send.mock.calls[1][1]!.body as string,
+    );
+    expect(retryRequest.messages.at(-1).content).toContain(
+      failed.result.response.reasons[0],
+    );
+  },
+);
+
 test("质量脚本：合法 JSON 但结构错误仍保留解析内容并记录 V1 中文原因", async () => {
   const { run, validation } = await qualityFiles(
     '{"missing":"sections"}',
