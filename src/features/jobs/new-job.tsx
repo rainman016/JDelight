@@ -217,7 +217,7 @@ export default function NewJob({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [retry]);
   const lines = useMemo(() => sourceLines(raw), [raw]);
-  const notes = checksOf(lines);
+  const notes = checksOf(lines, meta);
   const next = () => {
     if (raw.trim().length >= 40 && raw.length <= 12000) {
       setMeta(metaFrom(raw));

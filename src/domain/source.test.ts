@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { citationLabel, sourceLines } from "./source";
+import { checksOf, citationLabel, metaFrom, sourceLines } from "./source";
 import sample from "../../fixtures/sample-jd.json";
 
 test.each([
@@ -106,4 +106,77 @@ test("示例 JD 的标题、分区与条目编号保持原结果", () => {
   expect(
     lines.filter((line) => line.itemNo !== null).map((line) => line.itemNo),
   ).toEqual([1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4]);
+});
+
+const completeSource = [
+  "岗位名称：虚构产品专员",
+  "公司：测试纸舟科技",
+  "岗位职责",
+  "负责整理虚构产品需求。",
+  "任职要求",
+  "能够清晰表达需求。",
+];
+
+test.each([
+  [0, "岗位名称：虚构产品…方向专员"],
+  [0, "岗位名称：虚构产品...方向专员"],
+  [0, "岗位名称：虚构产品专员…"],
+  [1, "公司：测试纸舟...科技"],
+  [1, "公司：测试纸舟科技……"],
+  [3, "负责整理 …… 并跟进虚构需求。"],
+  [5, "能够清晰表达...虚构需求。"],
+])("第 %s 行省略号提示且不声称原文完整", (index, text) => {
+  const raw = [...completeSource];
+  raw[index] = text;
+  const notes = checksOf(sourceLines(raw.join("\n")), metaFrom(raw.join("\n")));
+  expect(notes).toContainEqual({
+    level: "warn",
+    text: `第 ${index + 1} 行有省略号，原文可能不完整；分析不会补全。`,
+    lineNo: index + 1,
+  });
+  expect(notes.some((note) => note.level === "ok")).toBe(false);
+  expect(notes.filter((note) => note.text.includes("有省略号"))).toHaveLength(
+    1,
+  );
+});
+
+test.each(["……", "...", "，", "、", "和", "及"])(
+  "末尾 %s 保留原有截断提示，不重复当作中间省略号",
+  (ending) => {
+    const raw = [...completeSource];
+    raw[5] = `能够清晰表达${ending}`;
+    expect(checksOf(sourceLines(raw.join("\n")))).toEqual([
+      {
+        level: "warn",
+        text: "第 6 行像是没写完，可能复制时被截断。",
+        lineNo: 6,
+      },
+    ]);
+  },
+);
+
+test("手改字段有省略号时提示字段，不借用原文行号", () => {
+  const notes = checksOf(sourceLines(completeSource.join("\n")), {
+    title: "虚构产品…专员",
+    company: "测试纸舟科技...",
+    place: "测试地点",
+  });
+  expect(notes).toEqual([
+    {
+      level: "warn",
+      text: "岗位名称有省略号，原文可能不完整；分析不会补全。",
+    },
+    {
+      level: "warn",
+      text: "公司有省略号，原文可能不完整；分析不会补全。",
+    },
+  ]);
+});
+
+test("完整原文仍显示分区齐全，不把小数点或一个点当省略号", () => {
+  const raw = [...completeSource];
+  raw[3] = "1. 负责整理虚构产品 2.0 需求。";
+  expect(checksOf(sourceLines(raw.join("\n")))).toEqual([
+    { level: "ok", text: "分区齐全，没发现被截断的迹象。" },
+  ]);
 });

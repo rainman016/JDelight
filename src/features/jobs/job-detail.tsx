@@ -4,7 +4,7 @@ import Link from "next/link";
 import { liveQuery } from "dexie";
 import { repository } from "@/data/repository";
 import type { ReportVersion } from "@/domain/schema";
-import { reportDate } from "@/domain/report-presentation";
+import { hasIncompleteJobMeta, reportDate } from "@/domain/report-presentation";
 import { MarkMenu } from "@/components/mark-menu";
 import { LocalNote } from "@/components/local-note";
 import { Modal } from "@/components/modal";
@@ -147,6 +147,9 @@ export default function JobDetail({ id }: { id: string }) {
                     {data.job.company || "未显示"} ·{" "}
                     {data.job.place || "未显示"}
                   </p>
+                  {hasIncompleteJobMeta(data.job) && (
+                    <p className="jd-source-incomplete">原文不完整</p>
+                  )}
                   {report && (
                     <ReportVersions
                       versions={data.versions}
@@ -441,6 +444,9 @@ export default function JobDetail({ id }: { id: string }) {
             <p>
               {data.job.company || "未显示"} · {data.job.place || "未显示"}
             </p>
+            {hasIncompleteJobMeta(data.job) && (
+              <p className="jd-source-incomplete">原文不完整</p>
+            )}
             <p>
               报告第 {printable.no} 版 · {reportDate(printable.createdAt)} ·{" "}
               {printable.content.origin === "model" ? "真实分析" : "示例分析"}

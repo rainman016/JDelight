@@ -13,6 +13,11 @@
 .job-detail .d-where {
   margin: 10px 0 6px;
 }
+.jd-source-incomplete {
+  margin: 0 0 6px;
+  color: var(--ink-2);
+  font-size: 12px;
+}
 .jd-version-wrap {
   position: relative;
   width: fit-content;
